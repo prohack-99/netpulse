@@ -25,34 +25,94 @@ Tested on a Kali Linux VM (VirtualBox, NAT adapter, Zeek 8.x in Docker).
 
 ## Requirements
 
-- Linux with Docker
-- Go 1.21 or newer, to build the bridge
+- **Linux** (Debian, Ubuntu or Kali). Zeek runs with host networking, which
+  Docker supports on Linux only. macOS and Windows are not supported.
+- **Docker**
+- **Go 1.21 or newer**, to build the bridge
+- **Git**
 - `hping3` (optional), to test the Other tab
+
+## Installation
+
+### 1. Install the tools
+
+```bash
+sudo apt update
+sudo apt install -y git golang-go docker.io
+sudo systemctl enable --now docker
+```
+
+Check the versions:
+
+```bash
+git --version
+docker --version
+go version
+```
+
+If `go version` prints something older than 1.21 (common on older Ubuntu),
+install a newer Go from https://go.dev/dl/ :
+
+```bash
+sudo rm -rf /usr/local/go
+sudo tar -C /usr/local -xzf go*.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+go version
+```
+
+### 2. Let your user run Docker (optional)
+
+Without this, put `sudo` in front of every `docker` command below.
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+Log out and back in for the change to apply.
+
+### 3. Find your network interface
+
+```bash
+ip route show default
+```
+
+The name after `dev` (for example `eth0`, `ens33` or `wlan0`) is your
+interface. Use it instead of `eth0` in the Zeek command below.
 
 ## Quick start
 
 ```bash
+git clone https://github.com/prohack-99/netpulse.git
+cd netpulse
 mkdir -p logs
 
-# 1. Zeek collector with JA3 and JA4
+# 1. Zeek collector with JA3 and JA4.
+#    The first build takes several minutes (it compiles the JA4 plugin).
 docker build -t netpulse-zeek:latest .
-docker run -d --name netpulse-zeek \
-  --network host --cap-add NET_ADMIN --restart unless-stopped \
-  -w /logs -v "$PWD/zeek:/s:ro" -v "$PWD/logs:/logs" \
-  netpulse-zeek:latest zeek -C -i eth0 /s/netpulse.zeek local
+docker run -d --name netpulse-zeek   --network host --cap-add NET_ADMIN --restart unless-stopped   -w /logs -v "$PWD/zeek:/s:ro" -v "$PWD/logs:/logs"   netpulse-zeek:latest zeek -C -i eth0 /s/netpulse.zeek local
 
-# 2. Go bridge (start it after Zeek wrote its first logs)
+# 2. Check that Zeek is running and writing logs
+docker ps | grep netpulse-zeek
+ls logs
+
+# 3. Build and start the Go bridge
 go build -o netpulse main.go
 ./netpulse -logs ./logs -html ./index.html
 ```
 
-Open http://127.0.0.1:5001
+Open http://127.0.0.1:5001 and browse a few websites to generate traffic.
+Press Ctrl+C to stop the bridge. To stop Zeek:
 
-To capture another interface, replace `eth0` in the `docker run` command.
-With Docker Compose installed, `docker compose up -d --build` does step 1
-(set `NETPULSE_IFACE` for another interface). The compose file is untested.
+```bash
+docker rm -f netpulse-zeek
+```
 
-The bridge reads **new** log lines only. It never replays old history.
+With Docker Compose installed, `docker compose up -d --build` replaces the
+two Docker commands (set `NETPULSE_IFACE` for another interface). The compose
+file is untested.
+
+The bridge reads **new** log lines only. It never replays old history, so
+start it after Zeek wrote its first logs.
 
 ## How it works
 
