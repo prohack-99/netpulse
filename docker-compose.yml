@@ -1,0 +1,14 @@
+services:
+  zeek:
+    build: .
+    image: netpulse-zeek:latest
+    container_name: netpulse-zeek
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    working_dir: /logs
+    volumes:
+      - ./zeek:/s:ro
+      - ./logs:/logs
+    command: ["zeek", "-C", "-i", "${NETPULSE_IFACE:-eth0}", "/s/netpulse.zeek", "local"]

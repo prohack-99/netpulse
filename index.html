@@ -1,0 +1,1611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NetPulse - Network Monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--bg0:#070b14;--bg1:#0d1526;--card:rgba(255,255,255,.045);--line:rgba(255,255,255,.09);
+--txt:#e7eef8;--dim:#8b98ad;--cyan:#22d3ee;--green:#34d399;--violet:#a78bfa;
+--amber:#fbbf24;--red:#f87171;
+--tblh:clamp(300px,calc(100vh - 350px),780px)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;color:var(--txt);
+min-height:100vh;background:
+radial-gradient(1100px 500px at 85% -10%,rgba(34,211,238,.13),transparent 60%),
+radial-gradient(900px 500px at -10% 110%,rgba(167,139,250,.10),transparent 60%),
+linear-gradient(180deg,var(--bg1),var(--bg0));
+padding:22px clamp(12px,3vw,40px) 40px}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.logo{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800}
+.logo .dot{width:11px;height:11px;border-radius:50%;
+background:linear-gradient(135deg,var(--cyan),var(--violet));box-shadow:0 0 16px var(--cyan)}
+.logo small{color:var(--dim);font-weight:500;font-size:12px}
+.status{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);
+background:var(--card);border:1px solid var(--line);padding:7px 13px;border-radius:99px;margin-left:auto}
+.pdot{width:9px;height:9px;border-radius:50%;background:var(--dim)}
+.pdot.live{background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.2s infinite}
+.pdot.warn{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+@keyframes pulse{50%{opacity:.35}}
+.search{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.3);
+border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-width:280px;flex:1;max-width:430px}
+.search input{background:none;border:none;outline:none;color:var(--txt);font-size:13px;width:100%}
+.search:focus-within{border-color:var(--cyan)}
+#mcnt{font-size:11px;color:var(--dim);white-space:nowrap}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+nav button{background:transparent;border:1px solid var(--line);color:var(--dim);
+border-radius:99px;padding:7px 14px;font-size:12.5px;cursor:pointer;transition:.15s}
+nav button.active{background:var(--cyan);border-color:var(--cyan);color:#04222b;font-weight:700}
+nav button:hover:not(.active){border-color:var(--cyan);color:var(--txt)}
+nav button .n{font-size:10.5px;opacity:.75;margin-left:5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+padding:16px 18px;backdrop-filter:blur(8px);margin-bottom:14px}
+h3{font-size:13.5px;font-weight:700;letter-spacing:.4px;margin-bottom:12px;color:#c6d2e2}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.stat .label{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--dim)}
+.stat .value{font-size:24px;font-weight:800;margin-top:5px;font-variant-numeric:tabular-nums}
+.stat .sub{font-size:11px;color:var(--dim);margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.tbl-scroll{overflow:auto;max-height:var(--tblh);
+border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.15)}
+.tbl-scroll table{border-collapse:separate;border-spacing:0}
+.tbl-scroll thead th{position:sticky;top:0;z-index:3;background:#0e1728;
+box-shadow:0 1px 0 var(--line)}
+.tbl-scroll tbody tr:hover{background:rgba(34,211,238,.06)}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.toolbar h3{margin:0;margin-right:auto}
+.fbtn{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:99px;
+padding:5px 12px;font-size:11.5px;cursor:pointer;transition:.15s}
+.fbtn.active{background:var(--cyan);border-color:var(--cyan);color:#04222b;font-weight:700}
+.fbtn:hover:not(.active){border-color:var(--cyan);color:var(--txt)}
+.sel{background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--txt);
+border-radius:9px;padding:6px 10px;font-size:12px;outline:none;cursor:pointer}
+.sel:focus{border-color:var(--cyan)}
+table{width:100%;border-collapse:collapse;font-size:12.8px}
+thead th{text-align:left;color:var(--dim);font-size:10.5px;text-transform:uppercase;
+letter-spacing:1px;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.05);white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.port{color:var(--dim)} .mac{color:var(--dim);font-size:11px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.dim{color:var(--dim)} .up{color:var(--violet)} .down{color:var(--cyan)}
+.rate{color:var(--green);font-weight:600}
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:10.5px;font-weight:700}
+.b-TCP{background:rgba(34,211,238,.14);color:var(--cyan);border:1px solid rgba(34,211,238,.35)}
+.b-UDP{background:rgba(167,139,250,.14);color:var(--violet);border:1px solid rgba(167,139,250,.35)}
+.b-ICMP{background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
+.b-ICMPv6{background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
+.b-OTHER,.b-ARP{background:rgba(139,152,173,.14);color:var(--dim);border:1px solid var(--line)}
+.b-DNS{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.b-TLS{background:rgba(244,114,182,.12);color:#f472b6;border:1px solid rgba(244,114,182,.35)}
+.b-q{background:rgba(34,211,238,.14);color:var(--cyan)}
+.b-r{background:rgba(167,139,250,.14);color:var(--violet)}
+.b-pending{background:rgba(251,191,36,.12);color:var(--amber)}
+.b-answered{background:rgba(52,211,153,.14);color:var(--green)}
+.b-timeout,.b-malformed,.b-unmatched{background:rgba(248,113,113,.14);color:var(--red)}
+.b-est{background:rgba(52,211,153,.14);color:var(--green)}
+.b-conn{background:rgba(251,191,36,.12);color:var(--amber)}
+.b-rst{background:rgba(248,113,113,.14);color:var(--red)}
+.b-close{background:rgba(139,152,173,.14);color:var(--dim)}
+.chip{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;
+background:hsl(var(--h) 70% 55% / .14);color:hsl(var(--h) 85% 72%);border:1px solid hsl(var(--h) 70% 55% / .4)}
+.dirb{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;
+border-radius:6px;font-size:10px;font-weight:800;background:rgba(52,211,153,.15);color:var(--green)}
+.dirb.none{background:rgba(139,152,173,.15);color:var(--dim)}
+.bar{height:8px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .5s}
+.svc-row{display:grid;grid-template-columns:110px 1fr 80px;gap:10px;align-items:center;margin-bottom:9px}
+.svc-bytes{font-size:11.5px;color:var(--dim);text-align:right;font-variant-numeric:tabular-nums}
+/* ---- Protocol share (donut + legend) ---- */
+.donut-wrap{display:flex;align-items:center;gap:32px;flex-wrap:wrap}
+.donut{width:186px;height:186px;border-radius:50%;position:relative;flex-shrink:0;transition:background .6s;
+box-shadow:0 0 34px rgba(34,211,238,.10),inset 0 0 0 1px rgba(255,255,255,.04)}
+.donut .hole{position:absolute;inset:26px;border-radius:50%;background:#0a1220;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.donut .hole b{font-size:36px;letter-spacing:-.5px}
+.donut .hole small{color:var(--dim);font-size:11px;letter-spacing:1.2px;text-transform:uppercase;margin-top:3px}
+.legend{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+gap:4px;align-self:stretch;
+font-size:13px;color:var(--dim);flex:1;min-width:200px}
+.legend b{color:var(--txt);font-variant-numeric:tabular-nums}
+.legend .pc{font-style:normal;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.legend>span{display:flex;align-items:center;white-space:nowrap}
+/* donut legend rows: dot | name | count | % */
+.legend>span.lg{display:grid;grid-template-columns:10px 64px 44px 44px;
+align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:default;transition:background .15s}
+.legend .lg .sw{margin:0}
+.legend .lg b,.legend .lg .pc{text-align:right;margin:0}
+.legend .lg:hover,.legend .lg.on{background:rgba(255,255,255,.07)}
+.legend .lg:hover .nm,.legend .lg.on .nm{color:var(--txt)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;flex-shrink:0}
+#oHist{width:100%;height:200px;display:block;margin-top:8px}
+/* ---- DNS monitor v2 ---- */
+.dns-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.livechip{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;
+letter-spacing:1px;padding:4px 12px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+.livechip.on{color:var(--green);border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+.livechip.off{color:var(--red);border-color:rgba(248,113,113,.45);background:rgba(248,113,113,.08)}
+.dmeta{font-size:11.5px;color:var(--dim);display:flex;gap:14px;flex-wrap:wrap}
+.dnssrch{margin-left:auto}
+.ovrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px}
+.ovcell{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.ovcell .l{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim)}
+.ovcell .v{font-size:18px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.rtchips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:11.5px}
+.rtchips .rc{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:99px;padding:3px 11px;color:var(--dim)}
+.rtchips .rc b{color:var(--txt);margin-left:6px;font-variant-numeric:tabular-nums}
+.rtchips .rc.top{border-color:rgba(34,211,238,.45);color:var(--cyan)}
+.dtable table{table-layout:fixed;width:100%}
+.dtable td,.dtable th{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dtable .cell{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.qcell{cursor:pointer}
+.qcell:hover{color:var(--cyan);text-decoration:underline dotted}
+.more{color:var(--dim);font-size:11px;cursor:pointer}
+.more:hover{color:var(--cyan)}
+.badge.b-NORMAL{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.28)}
+.badge.b-LOW{background:rgba(251,191,36,.1);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
+.badge.b-MEDIUM{background:rgba(251,146,60,.12);color:#fb923c;border:1px solid rgba(251,146,60,.4)}
+.badge.b-HIGH{background:rgba(248,113,113,.14);color:var(--red);border:1px solid rgba(248,113,113,.4)}
+#dnsBk{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:49;display:none}
+#dnsBk.open{display:block}
+#dnsDrawer{position:fixed;top:0;right:-470px;width:450px;max-width:94vw;height:100vh;z-index:50;
+background:#0d1526;border-left:1px solid var(--line);box-shadow:-18px 0 50px rgba(0,0,0,.5);
+transition:right .22s ease;display:flex;flex-direction:column}
+#dnsDrawer.open{right:0}
+#dnsDrawer .dh{display:flex;align-items:center;justify-content:space-between;
+padding:14px 16px;border-bottom:1px solid var(--line)}
+#dnsDrawer .db{overflow:auto;padding:14px 16px;flex:1}
+#dnsDrawer h4{font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim);margin:16px 0 8px}
+#dnsDrawer .db h4:first-child{margin-top:0}
+.dkv{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:12.5px}
+.dkv .k{color:var(--dim)}
+.dkv .v{word-break:break-all;font-variant-numeric:tabular-nums}
+.anslist{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;
+padding:10px 12px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.9;
+word-break:break-all;max-height:260px;overflow:auto}
+.why{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.3);border-radius:10px;
+padding:10px 12px;font-size:12.5px;line-height:1.7;margin-top:10px}
+.why ul{margin:6px 0 0 16px}
+.copied{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0e1728;
+border:1px solid rgba(52,211,153,.4);color:var(--green);padding:7px 16px;border-radius:99px;
+font-size:12px;z-index:60;display:none}
+/* ---- TLS monitor v2 ---- */
+#tlsBk{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:49;display:none}
+#tlsBk.open{display:block}
+#tlsDrawer{position:fixed;top:0;right:-470px;width:450px;max-width:94vw;height:100vh;z-index:50;
+background:#0d1526;border-left:1px solid var(--line);box-shadow:-18px 0 50px rgba(0,0,0,.5);
+transition:right .22s ease;display:flex;flex-direction:column}
+#tlsDrawer.open{right:0}
+#tlsDrawer .dh{display:flex;align-items:center;justify-content:space-between;
+padding:14px 16px;border-bottom:1px solid var(--line)}
+#tlsDrawer .db{overflow:auto;padding:14px 16px;flex:1}
+#tlsDrawer h4{font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim);margin:16px 0 8px}
+#tlsDrawer .db h4:first-child{margin-top:0}
+.th4{font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+.th4 b{color:var(--txt);font-size:13.5px;margin-left:6px}
+#tlsRate{width:100%;height:150px;display:block}
+.tlsbars .lbl{display:flex;justify-content:space-between;align-items:center;
+font-size:12px;color:var(--dim);margin-bottom:3px;gap:8px}
+.tlsbars .lbl b{color:var(--txt);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tlsbars .bar{margin-bottom:9px}
+.ja3row,.srvrow{display:flex;align-items:center;gap:10px;padding:7px 11px;border:1px solid var(--line);
+border-radius:10px;margin-bottom:7px;cursor:pointer;transition:.15s;background:rgba(0,0,0,.18);font-size:12.5px}
+.ja3row:hover,.srvrow:hover,.ja3row:focus,.srvrow:focus{border-color:var(--cyan);outline:none}
+.ja3row .mono{font-size:11.5px;color:var(--violet);word-break:break-all}
+.ja3row .n,.srvrow .n{margin-left:auto;font-size:11.5px;color:var(--dim);white-space:nowrap;text-align:right}
+.ja3row .n b,.srvrow .n b{color:var(--txt)}
+.srvrow .mono{color:var(--txt);word-break:break-all}
+.b-inc{background:rgba(251,191,36,.13);color:var(--amber)}
+.b-leg{background:rgba(251,191,36,.13);color:var(--amber);margin-left:5px}
+tr.tnew td{animation:tlsrow 1.8s ease-out}
+@keyframes tlsrow{0%{background:rgba(34,211,238,.18)}100%{background:transparent}}
+#tlsRows tr{cursor:pointer}
+#tlsRows tr:focus{outline:1px solid var(--cyan);outline-offset:-1px}
+#tlsLive i{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+#tlsLive.on i{animation:tlspulse 2.2s ease-in-out infinite}
+@keyframes tlspulse{0%,100%{opacity:1}50%{opacity:.3}}
+@media (prefers-reduced-motion: reduce){
+  tr.tnew td{animation:none}
+  #tlsLive.on i{animation:none}
+  #tlsDrawer{transition:none}
+}
+.pager{display:flex;align-items:center;gap:10px;justify-content:flex-end;
+margin-top:10px;font-size:12px;color:var(--dim);flex-wrap:wrap}
+.pager button{background:transparent;border:1px solid var(--line);color:var(--dim);
+border-radius:8px;padding:5px 12px;cursor:pointer}
+.pager button:disabled{opacity:.35;cursor:default}
+.pager button:not(:disabled):hover{border-color:var(--cyan);color:var(--txt)}
+.empty{text-align:center;padding:34px 10px;color:var(--dim);font-size:13px}
+.empty code{background:rgba(0,0,0,.35);padding:2px 8px;border-radius:6px;font-size:11.5px}
+.banner{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.35);color:var(--amber);
+padding:10px 16px;border-radius:12px;font-size:13px;margin-bottom:14px;display:none}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.kv div{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:10px;
+padding:9px 12px;font-size:12.5px;display:flex;justify-content:space-between}
+.kv b{font-variant-numeric:tabular-nums}
+.ok{color:var(--green)} .bad{color:var(--red)} .warn{color:var(--amber)}
+section.tab{display:none} section.tab.on{display:block}
+footer{margin-top:18px;text-align:center;color:var(--dim);font-size:11.5px}
+/* ---- NetPulse: Other IP protocols section upgrade (scoped to #s-other) ---- */
+#s-other .ox-sub{color:var(--dim);font-size:12px;letter-spacing:.4px;margin:-2px 0 10px}
+#s-other .ox-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+#s-other .ox-sum .v{font-size:16px}
+#s-other .ox-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+#s-other #oxChips{display:flex;gap:6px;flex-wrap:wrap}
+#s-other #oxChips .fbtn{padding:3px 11px;font-size:11.5px}
+#s-other .ox-q{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:99px;color:var(--txt);font:inherit;font-size:12.5px;padding:5px 13px;min-width:180px;outline:none}
+#s-other .ox-q:focus{border-color:var(--cyan)}
+#s-other .ox-q::placeholder{color:var(--dim)}
+#s-other .ox-controls.off{opacity:.45;pointer-events:none}
+#s-other .ox-empty{text-align:center;padding:24px 10px 28px;color:var(--dim)}
+#s-other .ox-ico{font-size:24px;line-height:1;opacity:.55;margin-bottom:9px}
+#s-other .ox-t1{color:var(--txt);font-size:13.5px;font-weight:600}
+#s-other .ox-t2{font-size:12px;margin-top:5px}
+#s-other .ox-nomatch td{text-align:center;color:var(--dim);padding:16px 10px;font-size:12.5px}
+@media(max-width:720px){#s-other .ox-sum{grid-template-columns:repeat(2,1fr)}#s-other .ox-q{min-width:0;width:100%}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="dot"></span>NetPulse <small>· live network monitor · eth0</small></div>
+  <div class="search">🔍<input id="q" placeholder="search this section: ip / port / domain / service / state / mac…"
+    autocomplete="off"><span id="mcnt"></span></div>
+  <div class="status"><span id="pdot" class="pdot"></span><span id="ptxt">connecting…</span></div>
+</header>
+
+<div id="banner" class="banner">⚠ collector offline — showing last known data</div>
+
+<nav id="tabs">
+  <button data-t="main" class="active">Main</button>
+  <button data-t="tcp">TCP<span class="n" id="c-tcp"></span></button>
+  <button data-t="udp">UDP<span class="n" id="c-udp"></span></button>
+  <button data-t="dns">DNS<span class="n" id="c-dns"></span></button>
+  <button data-t="icmp">ICMP<span class="n" id="c-icmp"></span></button>
+  <button data-t="icmpv6">ICMPv6<span class="n" id="c-icmpv6"></span></button>
+  <button data-t="arp">ARP<span class="n" id="c-arp"></span></button>
+  <button data-t="tls">TLS<span class="n" id="c-tls"></span></button>
+  <button data-t="other">Other<span class="n" id="c-other"></span></button>
+  <button data-t="st">Statistics</button>
+  <button data-t="diag">Diagnostics</button>
+</nav>
+
+<!-- ================= MAIN ================= -->
+<section class="tab on" id="s-main">
+  <div class="stats">
+    <div class="card stat"><div class="label">Active flows</div><div class="value" id="oFl">0</div>
+      <div class="sub" id="oPps">0 pkt/s</div></div>
+    <div class="card stat"><div class="label">Total traffic</div><div class="value" id="oBy">0 B</div>
+      <div class="sub" id="oPk">0 packets</div></div>
+    <div class="card stat"><div class="label">Upload</div><div class="value up" id="oUp">0 B/s</div>
+      <div class="sub" id="oUpSub">outbound</div></div>
+    <div class="card stat"><div class="label">Download</div><div class="value down" id="oDn">0 B/s</div>
+      <div class="sub" id="oDnSub">inbound</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Protocol share (flows)</h3>
+      <div class="donut-wrap"><div class="donut" id="oDonut">
+        <div class="hole"><b id="oPct">–</b><small id="oPctLbl">flows</small></div></div>
+      <div class="legend" id="oLeg"></div></div></div>
+    <div class="card"><h3 id="oHistT">Traffic — last 90 s <span class="dim">(▉ up · ▉ down)</span></h3>
+      <canvas id="oHist"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <h3>All live records</h3>
+      <div id="mchips" style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="fbtn active" data-f="ALL">All</button>
+        <button class="fbtn" data-f="TCP">TCP</button>
+        <button class="fbtn" data-f="UDP">UDP</button>
+        <button class="fbtn" data-f="ICMP">ICMP</button>
+        <button class="fbtn" data-f="ICMPv6">ICMPv6</button>
+        <button class="fbtn" data-f="ARP">ARP</button>
+        <button class="fbtn" data-f="DNS">DNS</button>
+        <button class="fbtn" data-f="TLS">TLS</button>
+        <button class="fbtn" data-f="OTHER">Other</button>
+      </div>
+      <select id="msort" class="sel" title="sort order">
+        <option value="bytes">Sort: bytes</option>
+        <option value="rate">Sort: speed</option>
+        <option value="pkts">Sort: packets</option>
+        <option value="recent">Sort: recent</option>
+      </select>
+      <select id="psize" class="sel" title="rows per page">
+        <option value="25" selected>25 / page</option>
+        <option value="50">50 / page</option>
+        <option value="100">100 / page</option>
+        <option value="250">250 / page</option>
+      </select>
+    </div>
+
+    <div class="tbl-scroll" id="mainScroll">
+      <table><thead><tr>
+        <th>Type</th><th>Source</th><th></th><th>Destination</th>
+        <th>Service / Domain</th>
+        <th class="num">Out ↑ pk</th><th class="num">Out ↑ B</th>
+        <th class="num">In ↓ pk</th><th class="num">In ↓ B</th>
+        <th class="num">Total B</th><th class="num">Speed</th>
+        <th>State</th><th>First</th><th>Last</th>
+      </tr></thead><tbody id="mRows"></tbody></table>
+    </div>
+    <div id="mEmpty" class="empty" style="display:none">no matching records</div>
+    <div class="pager"><span id="mainPg"></span>
+      <button id="mainPrev">‹ prev</button><button id="mainNext">next ›</button></div>
+  </div>
+</section>
+
+<!-- ================= TCP ================= -->
+<section class="tab" id="s-tcp">
+  <div class="card">
+    <div class="toolbar"><h3>TCP flows <span class="dim">(flags F=FIN S=SYN R=RST P=PSH A=ACK U=URG)</span></h3>
+      <select id="psize-t" class="sel psize2" title="rows per page">
+        <option value="25" selected>25 / page</option><option value="50">50 / page</option>
+        <option value="100">100 / page</option><option value="250">250 / page</option>
+      </select></div>
+    <div class="tbl-scroll"><table><thead><tr>
+      <th>Source</th><th></th><th>Destination</th><th>Service</th><th>Domain</th>
+      <th class="num">↑ pk</th><th class="num">↑ B</th><th class="num">↓ pk</th><th class="num">↓ B</th>
+      <th class="num">Total</th><th class="num">Rate</th><th>Flags A→B</th><th>Flags B→A</th>
+      <th>State</th><th>First</th><th>Last</th>
+    </tr></thead><tbody id="tRows"></tbody></table></div>
+    <div id="tEmpty" class="empty" style="display:none">no TCP traffic yet —
+      try <code>curl http://127.0.0.1:8080</code></div>
+    <div class="pager"><span id="tcpPg"></span>
+      <button id="tcpPrev">‹ prev</button><button id="tcpNext">next ›</button></div>
+  </div>
+</section>
+
+<!-- ================= UDP ================= -->
+<section class="tab" id="s-udp">
+  <div class="card">
+    <div class="toolbar"><h3>UDP flows <span class="dim">(DNS over UDP shows service "DNS")</span></h3>
+      <select id="psize-u" class="sel psize2" title="rows per page">
+        <option value="25" selected>25 / page</option><option value="50">50 / page</option>
+        <option value="100">100 / page</option><option value="250">250 / page</option>
+      </select></div>
+    <div class="tbl-scroll"><table><thead><tr>
+      <th>Source</th><th></th><th>Destination</th><th>Service</th><th>Domain</th>
+      <th class="num">Packets</th><th class="num">↑ B</th><th class="num">↓ B</th>
+      <th class="num">Rate</th><th>First</th><th>Last</th>
+    </tr></thead><tbody id="uRows"></tbody></table></div>
+    <div id="uEmpty" class="empty" style="display:none">no UDP traffic yet</div>
+    <div class="pager"><span id="udpPg"></span>
+      <button id="udpPrev">‹ prev</button><button id="udpNext">next ›</button></div>
+  </div>
+</section>
+
+<!-- ================= DNS ================= -->
+<section class="tab" id="s-dns">
+  <div class="card">
+    <div class="dns-head">
+      <h3 style="margin:0">DNS monitor</h3>
+      <span id="dnsLive" class="livechip">LIVE ●</span>
+      <div class="dmeta" id="dnsMeta"></div>
+      <div class="search dnssrch"><input id="dnsQ" placeholder="filter — text, or domain: / type:TXT / rcode:NXDOMAIN / client:10.0.2.15 / transport:udp / status:answered / dir:reply" autocomplete="off"><span></span></div>
+    </div>
+    <div class="ovrow" id="dnsOv"></div>
+    <div class="rtchips" id="dnsRt"></div>
+    <div class="tbl-scroll dtable"><table><thead><tr>
+      <th style="width:46px">Dir</th><th style="width:84px">Status</th>
+      <th>Query</th><th style="width:66px">Type</th><th style="width:92px">RCODE</th>
+      <th style="width:120px">Answers</th><th style="width:118px">Client</th>
+      <th style="width:62px">Latency</th><th style="width:82px">Risk</th>
+      <th style="width:46px">Age</th>
+    </tr></thead><tbody id="dRows"></tbody></table></div>
+    <div id="dEmpty" class="empty" style="display:none"></div>
+  </div>
+</section>
+<div id="dnsBk"></div>
+<aside id="dnsDrawer">
+  <div class="dh"><b>DNS transaction details</b><button class="fbtn" id="dnsDx">close ✕</button></div>
+  <div class="db" id="dnsDb"></div>
+</aside>
+<div id="dnsCopied" class="copied"></div>
+
+<!-- ================= ICMP ================= -->
+<section class="tab" id="s-icmp">
+  <div class="card"><h3>ICMP (IPv4)</h3>
+    <div class="tbl-scroll"><table><thead><tr>
+      <th>Source</th><th></th><th>Destination</th><th>Type</th><th>Code</th>
+      <th class="num">Echo req</th><th class="num">Echo rep</th>
+      <th class="num">Packets</th><th class="num">Bytes</th><th>First</th><th>Last</th>
+    </tr></thead><tbody id="i4Rows"></tbody></table></div>
+    <div id="i4Empty" class="empty" style="display:none">no IPv4 ICMP yet —
+      try <code>ping 127.0.0.1</code></div>
+  </div>
+</section>
+
+<!-- ================= ICMPv6 ================= -->
+<section class="tab" id="s-icmpv6">
+  <div class="card"><h3>ICMPv6 (IPv6)</h3>
+    <div class="tbl-scroll"><table><thead><tr>
+      <th>Source</th><th></th><th>Destination</th><th>Type</th><th>Code</th>
+      <th class="num">Echo req</th><th class="num">Echo rep</th>
+      <th class="num">Packets</th><th class="num">Bytes</th><th>First</th><th>Last</th>
+    </tr></thead><tbody id="i6Rows"></tbody></table></div>
+    <div id="i6Empty" class="empty" style="display:none">no ICMPv6 yet —
+      try <code>ping -6 ::1</code></div>
+  </div>
+</section>
+
+<!-- ================= ARP ================= -->
+<section class="tab" id="s-arp">
+  <div class="card"><h3>ARP conversations <span class="dim">— link-layer: no ports</span></h3>
+    <div class="tbl-scroll"><table><thead><tr>
+      <th>End A (IP / MAC)</th><th></th><th>End B (IP / MAC)</th>
+      <th class="num">Requests</th><th class="num">Replies</th>
+      <th class="num">Pkts by A</th><th class="num">Pkts by B</th>
+      <th class="num">Total</th><th>First</th><th>Last</th>
+    </tr></thead><tbody id="aRows"></tbody></table></div>
+    <div id="aEmpty" class="empty" style="display:none">no ARP yet — appears
+      automatically on real networks; loopback has none</div>
+  </div>
+</section>
+
+<!-- ================= TLS ================= -->
+<section class="tab" id="s-tls">
+  <div class="card">
+    <div class="dns-head">
+      <h3 style="margin:0">TLS monitor</h3>
+      <span id="tlsLive" class="livechip off"><i></i><span id="tlsLiveTxt">LIVE</span></span>
+      <div class="dmeta" id="tlsMeta"></div>
+    </div>
+    <div class="ovrow" id="tlsOv"></div>
+    <div class="grid2">
+      <div>
+        <div class="th4">TLS connections — last 60 s <b id="tlsRateNow">0</b></div>
+        <canvas id="tlsRate"></canvas>
+      </div>
+      <div class="tlsbars">
+        <div class="th4">Handshakes</div>
+        <div id="tlsHs"></div>
+        <div class="th4" style="margin-top:14px">TLS versions</div>
+        <div id="tlsVer"></div>
+      </div>
+    </div>
+    <div class="rtchips" id="tlsSig" style="margin-top:14px"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card" style="margin-bottom:0"><div class="th4">JA4 fingerprints
+      <span class="dim" style="text-transform:none;letter-spacing:0">— as logged by Zeek, never computed here</span></div>
+      <div id="tlsJa4"></div>
+      <div class="th4" style="margin-top:14px">JA3 fingerprints (legacy)</div>
+      <div id="tlsJa3"></div></div>
+    <div class="card" style="margin-bottom:0"><div class="th4">TLS destinations</div>
+      <div id="tlsSrv"></div></div>
+  </div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="card" style="margin-bottom:0"><div class="th4">ALPN distribution</div>
+      <div class="tlsbars" id="tlsAlpn"></div></div>
+    <div class="card" style="margin-bottom:0"><div class="th4">SNI visibility</div>
+      <div class="tlsbars" id="tlsSni"></div></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="dns-head">
+      <h3 style="margin:0">TLS handshakes</h3>
+      <div class="search dnssrch"><input id="tlsF" placeholder="filter — text, or sni: / ver:TLS1.3 / alpn:h2 / ja3: / ja4: / state:failed / client: / server: / cipher:" autocomplete="off"><span></span></div>
+    </div>
+    <div class="rtchips" id="tlsChips"></div>
+    <div class="tbl-scroll"><table><thead><tr id="tlsHead">
+      <th>Type</th><th>SNI (server name)</th><th>Version</th><th>ALPN</th>
+      <th>JA4</th><th>JA3</th><th>Client</th><th>Server</th><th>State</th><th>Age</th>
+    </tr></thead><tbody id="tlsRows"></tbody></table></div>
+    <div id="tlsEmpty" class="empty" style="display:none"></div>
+  </div>
+</section>
+<div id="tlsBk"></div>
+<aside id="tlsDrawer">
+  <div class="dh"><b id="tlsDhT">TLS connection details</b><button class="fbtn" id="tlsDx">close ✕</button></div>
+  <div class="db" id="tlsDb"></div>
+</aside>
+
+<!-- ================= OTHER ================= -->
+<section class="tab" id="s-other">
+  <div class="card">
+    <div class="toolbar"><h3>Other IP protocols</h3>
+      <select id="psize-x" class="sel psize2" title="rows per page">
+        <option value="25" selected>25 / page</option><option value="50">50 / page</option>
+        <option value="100">100 / page</option><option value="250">250 / page</option>
+      </select></div>
+    <div class="ox-sub">GRE · OSPF · ESP · SCTP · VRRP · PIM · IGMP</div>
+    <div class="ox-sum">
+      <div class="ovcell"><div class="l">Flows</div><div class="v" id="oxFl">0</div></div>
+      <div class="ovcell"><div class="l">Packets</div><div class="v" id="oxPk">0</div></div>
+      <div class="ovcell"><div class="l">Bytes</div><div class="v" id="oxBy">0 B</div></div>
+      <div class="ovcell"><div class="l">Protocols</div><div class="v" id="oxNp">0</div></div>
+    </div>
+    <div class="ox-controls" id="oxCtl">
+      <div id="oxChips"></div>
+      <input id="oxQ" class="ox-q" placeholder="Search protocol / IP…" oninput="rOther()">
+    </div>
+    <div class="tbl-scroll"><table><thead><tr>
+      <th>Protocol</th><th>Source</th><th></th><th>Destination</th>
+      <th class="num">Packets</th><th class="num">↑ B</th><th class="num">↓ B</th>
+      <th class="num">Total</th><th class="num">Rate</th><th>State</th>
+      <th>First</th><th>Last</th>
+    </tr></thead><tbody id="xRows"></tbody></table></div>
+    <div id="oxEmpty" class="ox-empty" style="display:none">
+      <div class="ox-ico">◇</div>
+      <div class="ox-t1">No other IP protocol traffic detected</div>
+      <div class="ox-t2">GRE · OSPF · ESP · SCTP · VRRP · PIM · IGMP — traffic will appear here when observed</div>
+    </div>
+    <div class="pager"><span id="otherPg"></span>
+      <button id="otherPrev">‹ prev</button><button id="otherNext">next ›</button></div>
+  </div>
+</section>
+
+<!-- ================= STATISTICS ================= -->
+<section class="tab" id="s-st">
+  <div class="grid2">
+    <div class="card"><h3>Top endpoints</h3><div id="stEnd"></div></div>
+    <div class="card"><h3>Top services</h3><div id="stSvc"></div></div>
+    <div class="card"><h3>Top domains (observed via DNS + TLS SNI)</h3><div id="stDom"></div></div>
+    <div class="card"><h3>Flows by protocol</h3><div class="legend" id="stProto"
+      style="gap:10px;font-size:13.5px"></div></div>
+  </div>
+</section>
+
+<!-- ================= DIAGNOSTICS ================= -->
+<section class="tab" id="s-diag">
+  <div class="card"><h3>Diagnostics — Zeek bridge &amp; collector</h3><div class="kv" id="diagKv"></div></div>
+  <div class="card"><h3>Data notes</h3>
+    <div style="font-size:13px;color:var(--dim);line-height:1.8">
+      · <b>log rows processed</b> = JSON lines read from the Zeek logs (conn, dns, ssl, arp, icmp_live, other_ip).<br>
+      · <b>log rows/s</b> = rate of new rows arriving, sampled once per second.<br>
+      · <b>history samples</b> = 1-second up/down snapshots feeding the traffic chart (max 90).<br>
+      · <b>UI: flows cut</b> = flows trimmed from the UI snapshot when the table exceeds 1500.<br>
+      · <b>DNS counting</b>: each Zeek dns.log row is one transaction — it always starts as a query; if the row carries an RCODE/RTT, the reply was seen. "Evicted" = oldest events rotated out of the bridge ring (500) or UI buffer (1200) — buffer eviction, not packet loss.<br>
+      · DNS domains and TLS SNI come <b>only from observed plaintext metadata</b>;
+      DoH/DoT, ECH, QUIC and VPNs can hide them. An IP→domain match is an association,
+      not proof. URLs/paths/search terms are never recoverable from encrypted traffic.
+    </div></div>
+</section>
+
+<footer>Zeek (Docker) → JSON logs → Go bridge → SSE · updates every 1 s</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtB = n => { if(!n) return "0 B";
+  const u=["B","KB","MB","GB","TB"]; let i=0,v=n;
+  while(v>=1024&&i<u.length-1){v/=1024;i++;}
+  return (v<10&&i>0?v.toFixed(2):Math.round(v).toLocaleString())+" "+u[i]; };
+const fmtN = n => (n||0).toLocaleString();
+const ago = t => Math.max(0,Math.round(D.now-t))+"s";
+const fmtT = t => t?new Date(t*1000).toLocaleTimeString(): "–";
+const hue = s => { let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))%360; return h; };
+
+let D = {now:Date.now()/1000}, q = "", tab = "main";
+let legHover = null;
+const page = {};
+let pageSize = 25;
+let mainFilter = "ALL", mainSort = "bytes";
+const ROWSEL = {main:"#mRows",tcp:"#tRows",udp:"#uRows",dns:"#dRows",icmp:"#i4Rows",
+                icmpv6:"#i6Rows",arp:"#aRows",tls:"#tlsRows",other:"#xRows"};
+
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelector("#tabs .active").classList.remove("active");
+  b.classList.add("active");
+  tab=b.dataset.t;
+  document.querySelectorAll("section.tab").forEach(s=>
+      s.classList.toggle("on", s.id==="s-"+tab));
+  render();
+});
+
+function setPageSize(v){
+  pageSize = +v || 25;
+  for(const k in page) page[k] = 0;
+  document.querySelectorAll(".psize2").forEach(s=>s.value=String(pageSize));
+  $("#psize").value = String(pageSize);
+  render();
+}
+ $("#psize").onchange = e=>setPageSize(e.target.value);
+document.querySelectorAll(".psize2").forEach(s=>
+  s.onchange = e=>setPageSize(e.target.value));
+
+document.querySelectorAll("#mchips .fbtn").forEach(b=>b.onclick=()=>{
+  document.querySelector("#mchips .active").classList.remove("active");
+  b.classList.add("active");
+  mainFilter=b.dataset.f; page.main=0; render();
+});
+ $("#msort").onchange = e=>{ mainSort=e.target.value; page.main=0; render(); };
+
+ $("#q").addEventListener("input", e=>{
+  q = e.target.value.trim().toLowerCase();
+  page[tab]=0; render();
+});
+const matchQ = (...f) => !q || f.join(" ").toLowerCase().includes(q);
+
+/* Protocol share legend: hover a row to highlight its slice */
+$("#oLeg").addEventListener("mouseover",e=>{
+  const r=e.target.closest(".lg"), k=r?r.dataset.k:null;
+  if(k!==legHover){legHover=k; rMain();}
+});
+$("#oLeg").addEventListener("mouseleave",()=>{ if(legHover){legHover=null; rMain();} });
+
+const es = new EventSource("/api/stream");
+es.onmessage = ev=>{
+  D = JSON.parse(ev.data);
+  if(D.dns) dnsIngest(D.dns);
+  dnsTick();
+  render();
+};
+es.onerror   = ()=>{ status(false,"reconnecting…"); };
+
+function status(live,txt){
+  $("#pdot").className = "pdot "+(live?"live":"warn");
+  $("#ptxt").textContent = txt;
+  $("#banner").style.display = live?"none":"block";
+}
+
+function setRows(sel, html){
+  const body = $(sel);
+  const sc = body.closest(".tbl-scroll");
+  const st = sc ? sc.scrollTop : 0, sl = sc ? sc.scrollLeft : 0;
+  body.innerHTML = html;
+  if(sc){ sc.scrollTop = st; sc.scrollLeft = sl; }
+}
+
+function paginate(list,key){
+  const max=Math.max(0,Math.ceil(list.length/pageSize)-1);
+  page[key]=Math.min(page[key]||0,max);
+  return list.slice(page[key]*pageSize,(page[key]+1)*pageSize);
+}
+function pager(key,list){
+  const pg=page[key]||0, id=key==="main"?"mainPg":key+"Pg";
+  const n=list.length;
+  const unit = key==="main" ? "records" : "flows";
+  $(`#${id}`).textContent = n
+    ? `Showing ${pg*pageSize+1}\u2013${Math.min((pg+1)*pageSize,n)} of ${fmtN(n)} ${unit}`
+    : `Showing 0 of 0 ${unit}`;
+  $(`#${key}Prev`).disabled = pg===0;
+  $(`#${key}Next`).disabled = (pg+1)*pageSize>=n;
+}
+["main","tcp","udp","other"].forEach(k=>{
+  $(`#${k}Prev`).onclick=()=>{page[k]=Math.max(0,(page[k]||0)-1);render();};
+  $(`#${k}Next`).onclick=()=>{page[k]=(page[k]||0)+1;render();};
+});
+
+const pBadge = p => `<span class="badge b-${esc(p)}">${esc(p)}</span>`;
+const stBadge = s => s ? `<span class="badge b-${
+  {established:"est",connecting:"conn",closing:"conn",closed:"close",reset:"rst"}[s]||"close"
+}">${esc(s)}</span>` : "–";
+const domCell = f => f.dom?`<span class="mono" style="color:var(--green)">${esc(f.dom)}</span>`:"";
+const svcCell = f => `<span class="chip" style="--h:${hue(f.svc)}">${esc(f.svc)}</span>`;
+
+function ioCells(f){
+  let opk,oby,ipk,iby,local=true;
+  if(f.loc==="a"){ opk=f.apk;oby=f.aby;ipk=f.bpk;iby=f.bby; }
+  else if(f.loc==="b"){ opk=f.bpk;oby=f.bby;ipk=f.apk;iby=f.aby; }
+  else { opk=f.apk;oby=f.aby;ipk=f.bpk;iby=f.bby;local=false; }
+  const cls = local?"":"dim", t = local?"":"title='A→B / B→A (unknown local side)'";
+  return `<td class="num up ${cls}" ${t}>${fmtN(opk)}</td><td class="num up ${cls}" ${t}>${fmtB(oby)}</td>
+          <td class="num down ${cls}" ${t}>${fmtN(ipk)}</td><td class="num down ${cls}" ${t}>${fmtB(iby)}</td>`;
+}
+function dirCell(f){
+  return `<span class="dirb ${f.loc||"none"}" title="${f.loc==="a"||f.loc==="b"?"endpoint "+f.loc.toUpperCase()+" is this host":"local side unknown"}">${(f.loc||"–").toUpperCase()}</span>`;
+}
+
+/* ---------- selectors ---------- */
+const flowsOf = p => (D.flows||[]).filter(f=>f.p===p);
+const mainRecords = () => {
+  const out=[], mf=mainFilter;
+  if(mf==="ALL"||!["ARP","DNS","TLS"].includes(mf))
+    for(const f of (D.flows||[]))
+      if(mf==="ALL"||f.p===mf) out.push({rt:"flow",f});
+  if(mf==="ALL"||mf==="ARP")
+    for(const a of (D.arp||[])) out.push({rt:"arp",a});
+  if(mf==="ALL"||mf==="DNS")
+    for(const e of dnsBuf) out.push({rt:"dns",e});
+  if(mf==="ALL"||mf==="TLS")
+    for(const e of (D.tls||[])) out.push({rt:"tls",e});
+  return out;
+};
+const mMetric = r => {
+  if(r.rt==="flow"){const f=r.f;
+    return mainSort==="rate" ? (f.rab||0)+(f.rba||0)
+         : mainSort==="pkts" ? (f.tp||0)
+         : mainSort==="recent" ? (f.ls||0)
+         : (f.tby||0);}
+  if(r.rt==="arp"){const a=r.a;
+    return mainSort==="recent" ? (a.ls||0) : mainSort==="pkts" ? (a.tp||0) : 0;}
+  const e=r.e;
+  return mainSort==="recent" ? (e.t||0) : 0;
+};
+const mainMatch = r => r.rt==="flow"
+  ? matchQ(r.f.ea,r.f.eb,r.f.eap,r.f.ebp,r.f.p,r.f.svc,r.f.dom||"",r.f.st||"")
+  : r.rt==="arp"
+  ? matchQ(r.a.i1,r.a.i2,r.a.m1,r.a.m2,"arp","req","rep")
+  : r.rt==="dns"
+  ? matchQ(r.e.nm,(r.e.an||[]).join(" "),r.e.cl,r.e.sv,r.e.ty,r.e.rc,"dns",r.e.st,r.e.tr)
+  : matchQ(r.e.sni,r.e.cl,r.e.sv,r.e.ver,r.e.alpn,r.e.ja3||"",r.e.ja3s||"",r.e.ja4||"",r.e.ja4s||"",r.e.state||"",r.e.cipher||"","tls");   /* rt==="tls" */
+
+function render(){
+  status(D.live, D.live?"live":"collector offline");
+  $("#c-tcp").textContent   = fmtN(flowsOf("TCP").length);
+  $("#c-udp").textContent   = fmtN(flowsOf("UDP").length);
+  $("#c-dns").textContent   = fmtN(dnsBuf.length);
+  $("#c-icmp").textContent  = fmtN(flowsOf("ICMP").length);
+  $("#c-icmpv6").textContent= fmtN(flowsOf("ICMPv6").length);
+  $("#c-arp").textContent   = fmtN((D.arp||[]).length);
+  $("#c-tls").textContent   = fmtN((D.tls||[]).length);
+  $("#c-other").textContent = fmtN(flowsOf("OTHER").length);
+  $("#mcnt").textContent = q
+    ? document.querySelectorAll((ROWSEL[tab]||"#stEnd")+" tr").length + " shown" : "";
+  ({main:rMain,tcp:rTcp,udp:rUdp,dns:rDns,icmp:rI4,icmpv6:rI6,
+    arp:rArp,tls:rTls,other:rOther,st:rStats,diag:rDiag})[tab]();
+}
+
+/* ---------- MAIN ---------- */
+function rMain(){
+  const t=D.totals||{};
+  $("#oFl").textContent=fmtN(t.flows); $("#oPps").textContent=fmtN(t.pps)+" pkt/s";
+  $("#oBy").textContent=fmtB(t.bytes); $("#oPk").textContent=fmtN(t.packets)+" packets";
+  $("#oUp").textContent=fmtB(t.up)+"/s"; $("#oDn").textContent=fmtB(t.down)+"/s";
+
+  if(D.dir_known===false){
+    $("#oHistT").innerHTML = "Traffic — last 90 s <span class='dim'>(▉ total rate — direction unknown on this iface)</span>";
+    $("#oUp").textContent = "–";
+    $("#oUpSub").textContent = "direction unknown";
+    $("#oDnSub").textContent = "total rate";
+  } else {
+    $("#oHistT").innerHTML = "Traffic — last 90 s <span class='dim'>(▉ up · ▉ down)</span>";
+    $("#oUpSub").textContent = "outbound";
+    $("#oDnSub").textContent = "inbound";
+  }
+
+  /* donut: flows + ARP + DNS + TLS */
+  const P=Object.assign({},D.protos||{});
+  P.ARP=(D.arp||[]).length;
+  P.DNS=dnsBuf.length;
+  P.TLS=(D.tls||[]).length;
+  const keys=Object.keys(P).filter(k=>P[k]).sort((a,b)=>P[b]-P[a]);   // sorted by value
+  const colors={TCP:"var(--cyan)",UDP:"var(--violet)",ICMP:"var(--amber)",
+                ICMPv6:"var(--amber)",OTHER:"#8b98ad",ARP:"#64748b",
+                DNS:"var(--green)",TLS:"#f472b6"};
+  const tot=keys.reduce((a,k)=>a+P[k],0)||1;
+  const pctTxt=n=>{const p=n/tot*100; return p>0&&p<1?"<1%":Math.round(p)+"%";};
+  let acc=0; const stops=[];
+  keys.forEach(k=>{
+    const share=P[k]/tot*100;                      // exact share: ring always closes at 100%
+    const c=(legHover&&legHover!==k)
+      ? `color-mix(in srgb, ${colors[k]} 30%, transparent)` : colors[k];
+    stops.push(`${c} ${acc}% ${acc+share}%`); acc+=share;
+  });
+  $("#oLeg").innerHTML=keys.map(k=>
+    `<span class="lg${legHover===k?" on":""}" data-k="${k}">`+
+    `<i class="sw" style="background:${colors[k]}"></i><span class="nm">${k}</span>`+
+    `<b>${fmtN(P[k])}</b><i class="pc">${pctTxt(P[k])}</i></span>`).join("")||"–";
+  $("#oDonut").style.background=`conic-gradient(${stops.join(",")})`;
+  const shown=(legHover&&P[legHover])?legHover:keys[0];
+  $("#oPct").textContent=shown?pctTxt(P[shown]):"0%";
+  $("#oPctLbl").textContent=shown||"flows";
+
+  /* ---- traffic history: diverging area chart (up above, down below) ---- */
+  const cv=document.getElementById("oHist");
+  if(cv){
+    const dpr=window.devicePixelRatio||1;
+    const W=cv.clientWidth||cv.parentElement.clientWidth||600;
+    const HH=cv.clientHeight||200;
+    cv.width=W*dpr; cv.height=HH*dpr;
+    const g=cv.getContext("2d"); g.scale(dpr,dpr); g.clearRect(0,0,W,HH);
+    const cs=getComputedStyle(document.documentElement);
+    const getv=n=>(cs.getPropertyValue(n).trim()||"").replace("#","");
+    const rgba=(h,a)=>{if(h.length===3)h=h.split("").map(c=>c+c).join("");
+      const n=parseInt(h,16);
+      return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;};
+    const upC=getv("--violet")||"a78bfa", dnC=getv("--cyan")||"22d3ee";
+    const dimC=cs.getPropertyValue("--dim").trim()||"#8b98ad";
+    const txtC=cs.getPropertyValue("--txt").trim()||"#e7eef8";
+    const S=D.history||[];
+    if(S.length>1){
+      const padL=48, padR=10, padT=8, padB=20;
+      const cw=W-padL-padR, ch=HH-padT-padB;
+      const mid=padT+ch/2, half=ch/2-3;
+      const mx=Math.max(1,...S.map(h=>Math.max(h.up||0,h.down||0)));
+      const bw=cw/(S.length-1);
+      const X=i=>padL+i*bw;
+      /* grid + y labels, mirrored around the zero line */
+      const grid=(v,lbl)=>{const y=mid-(v/mx)*half;
+        g.strokeStyle=v===0?"rgba(148,163,184,.45)":"rgba(148,163,184,.13)";
+        g.lineWidth=1; g.beginPath(); g.moveTo(padL,y); g.lineTo(W-padR,y); g.stroke();
+        if(lbl){g.fillStyle=dimC; g.font="10px ui-monospace,monospace";
+          g.textAlign="right"; g.textBaseline="middle"; g.fillText(lbl,padL-6,y);}};
+      grid(mx,fmtB(mx)); grid(mx/2,fmtB(mx/2)); grid(0,"0");
+      grid(-mx/2,fmtB(mx/2)); grid(-mx,"-"+fmtB(mx));
+      const area=(k,sign,c)=>{g.beginPath();
+        S.forEach((h,i)=>{const y=mid-sign*((h[k]||0)/mx)*half;
+          i?g.lineTo(X(i),y):g.moveTo(X(i),y);});
+        g.lineTo(X(S.length-1),mid); g.lineTo(padL,mid); g.closePath();
+        const gr=sign>0?g.createLinearGradient(0,padT,0,mid)
+                       :g.createLinearGradient(0,mid,0,HH-padB);
+        gr.addColorStop(0,rgba(c,.5)); gr.addColorStop(1,rgba(c,.06));
+        g.fillStyle=gr; g.fill();
+        g.strokeStyle="#"+c; g.lineWidth=1.5; g.stroke();};
+      area("up",1,upC);      /* outgoing above the zero line */
+      area("down",-1,dnC);   /* incoming below the zero line */
+      /* x-axis: 5 time labels across the 90 s window */
+      g.fillStyle=dimC; g.font="10px ui-monospace,monospace";
+      g.textAlign="center"; g.textBaseline="alphabetic";
+      const t0=S[0].t||D.now||0, t1=S[S.length-1].t||D.now||0;
+      for(let k=0;k<5;k++){
+        const i=Math.round(k/4*(S.length-1));
+        g.fillText(new Date((t0+(t1-t0)*k/4)*1000).toLocaleTimeString([],{hour12:false}),X(i),HH-5);}
+      /* legend, top right */
+      g.textAlign="left"; g.textBaseline="middle"; g.font="10.5px ui-sans-serif,system-ui";
+      const legY=padT+8;
+      const legend=(txt,c,y)=>{const tw=g.measureText(txt).width;
+        g.fillStyle=rgba(c,.85); g.fillRect(W-padR-tw-15,y-4,9,9);
+        g.fillStyle=txtC; g.fillText(txt,W-padR-tw,y);};
+      legend("out (up)",upC,legY);
+      legend("in (down)",dnC,legY+15);
+      /* hover tooltip */
+      cv.onmousemove=e=>{const r=cv.getBoundingClientRect();
+        const i=Math.max(0,Math.min(S.length-1,
+          Math.round((e.clientX-r.left-padL)/bw)));
+        const h=S[i];
+        if(h) cv.title=`↑ ${fmtB(h.up||0)}/s · ↓ ${fmtB(h.down||0)}/s`;};
+    } else {
+      g.fillStyle=dimC; g.font="12px system-ui";
+      g.fillText("collecting history… (need ~2 s)",8,20);
+    }
+  }
+  
+  const all=mainRecords().filter(mainMatch)
+    .sort((x,y)=>mMetric(y)-mMetric(x));
+  const list=paginate(all,"main");
+  /* FIX 3: branch order — flow, arp, tls all return early; DNS is the
+     fall-through and has NO stray closing brace */
+  setRows("#mRows", list.map(r=>{
+    if(r.rt==="flow"){const f=r.f;return `
+      <tr><td>${dirCell(f)} ${pBadge(f.p)}</td>
+      <td class="mono">${esc(f.ea)}<span class="port">:${f.eap}</span></td><td class="dim">➜</td>
+      <td class="mono">${esc(f.eb)}<span class="port">:${f.ebp}</span></td>
+      <td>${svcCell(f)} ${domCell(f)}</td>
+      ${ioCells(f)}
+      <td class="num">${fmtB(f.tby)}</td>
+      <td class="num rate">${(f.rab+f.rba)>0?fmtB(f.rab+f.rba)+"/s":"–"}</td>
+      <td>${stBadge(f.st)}</td>
+      <td class="dim mono">${fmtT(f.fs)}</td><td class="dim">${ago(f.ls)}</td></tr>`;}
+    if(r.rt==="arp"){const a=r.a;return `
+      <tr><td>${pBadge("ARP")}</td>
+      <td class="mono">${esc(a.i1)}<br><span class="mac">${esc(a.m1)||"?"}</span></td><td class="dim">➜</td>
+      <td class="mono">${esc(a.i2)}<br><span class="mac">${esc(a.m2)||"?"}</span></td>
+      <td><span class="chip" style="--h:20">ARP ${a.req}/${a.rep}</span></td>
+      <td class="num dim">–</td><td class="num dim">–</td><td class="num dim">–</td><td class="num dim">–</td>
+      <td class="num">${fmtN(a.tp)}</td><td class="num dim">–</td>
+      <td class="dim">${a.req} req · ${a.rep} rep</td>
+      <td class="dim mono">${fmtT(a.fs)}</td><td class="dim">${ago(a.ls)}</td></tr>`;}
+    if(r.rt==="tls"){const e=r.e;return `
+      <tr><td>${pBadge("TLS")} <span class="badge b-${e.hs==="client"?"q":"r"}"><span class="dim">HS</span></span></td>
+      <td class="mono">${esc(e.cl)}<span class="port">:${e.clp}</span></td><td class="dim">➜</td>
+      <td class="mono">${esc(e.sv)}<span class="port">:${e.svp}</span></td>
+      <td>${e.sni?`<span class="chip" style="--h:${hue(e.sni)}">${esc(e.sni)}</span>`:`<span class="dim" title="No server_name observed — reduced visibility, not a verdict">SNI unavailable —</span>`}</td>
+      <td class="num dim">–</td><td class="num dim">–</td><td class="num dim">–</td><td class="num dim">–</td>
+      <td class="num dim">–</td><td class="num dim">–</td>
+      <td class="dim">${esc(e.ver)}${e.alpn?" · "+esc(e.alpn):""}</td>
+      <td class="dim mono">–</td><td class="dim">${ago(e.t)}</td></tr>`;}
+    const e=r.e,n=normDNS(e);return `
+      <tr><td>${pBadge("DNS")} <span class="badge ${n.dir==="reply"?"b-r":"b-q"}" title="${n.dir==="reply"?"transaction with reply":"query, no reply seen yet"}">${n.dir==="reply"?"Q\u2192R":"Q"}</span></td>
+      <td class="mono">${esc(e.cl)}<span class="port">:${e.clp}</span></td><td class="dim">➜</td>
+      <td class="mono">${esc(e.sv)}<span class="port">:${e.svp}</span></td>
+      <td><span class="chip" style="--h:${hue(e.nm||"?")}">${esc(e.nm)||"(unparsed)"}</span></td>
+      <td class="num dim">–</td><td class="num dim">–</td><td class="num dim">–</td><td class="num dim">–</td>
+      <td class="num dim">–</td><td class="num dim">–</td>
+      <td><span class="badge b-${esc(e.st)}">${esc(e.st)}</span> <span class="dim">${esc(e.tr)}</span></td>
+      <td class="dim mono">${fmtT(e.qt)}</td><td class="dim">${ago(e.t)}</td></tr>`;
+  }).join(""));
+  $("#mEmpty").style.display=all.length?"none":"block";
+  pager("main",all);
+}
+
+/* ---------- TCP ---------- */
+function rTcp(){
+  const all=flowsOf("TCP").filter(f=>matchQ(f.ea,f.eb,f.eap,f.ebp,f.svc,f.dom||"",f.st||""));
+  const list=paginate(all,"tcp");
+  const fs=f=>{const m={F:"FIN",S:"SYN",R:"RST",P:"PSH",A:"ACK",U:"URG"};
+    return [...(f.fa||"")].map(c=>`<span title="${m[c]||c}">${c}</span>`).join(" ")||"–";};
+  setRows("#tRows", list.map(f=>`
+    <tr><td class="mono">${esc(f.ea)}:${f.eap}</td><td class="dim">➜</td>
+    <td class="mono">${esc(f.eb)}:${f.ebp}</td>
+    <td>${svcCell(f)}</td><td>${domCell(f)}</td>
+    <td class="num up">${fmtN(f.apk)}</td><td class="num up">${fmtB(f.aby)}</td>
+    <td class="num down">${fmtN(f.bpk)}</td><td class="num down">${fmtB(f.bby)}</td>
+    <td class="num">${fmtB(f.tby)}</td>
+    <td class="num rate">${(f.rab+f.rba)>0?fmtB(f.rab+f.rba)+"/s":"–"}</td>
+    <td class="mono">${fs(f)}</td><td class="mono">${fs(f)}</td>
+    <td>${stBadge(f.st)}</td>
+    <td class="dim mono">${fmtT(f.fs)}</td><td class="dim">${ago(f.ls)}</td></tr>`).join(""));
+  $("#tEmpty").style.display=list.length?"none":"block";
+  pager("tcp",all);
+}
+
+/* ---------- UDP ---------- */
+function rUdp(){
+  const all=flowsOf("UDP").filter(f=>matchQ(f.ea,f.eb,f.eap,f.ebp,f.svc,f.dom||""));
+  const list=paginate(all,"udp");
+  setRows("#uRows", list.map(f=>`
+    <tr><td class="mono">${esc(f.ea)}:${f.eap}</td><td class="dim">➜</td>
+    <td class="mono">${esc(f.eb)}:${f.ebp}</td>
+    <td>${svcCell(f)}</td><td>${domCell(f)}</td>
+    <td class="num">${fmtN(f.tp)}</td>
+    <td class="num up">${fmtB(f.aby)}</td><td class="num down">${fmtB(f.bby)}</td>
+    <td class="num rate">${(f.rab+f.rba)>0?fmtB(f.rab+f.rba)+"/s":"–"}</td>
+    <td class="dim mono">${fmtT(f.fs)}</td><td class="dim">${ago(f.ls)}</td></tr>`).join(""));
+  $("#uEmpty").style.display=list.length?"none":"block";
+  pager("udp",all);
+}
+
+/* ---------- DNS monitor v2 ---------- */
+let dnsFilter="", dnsAgg={};
+/* ---- normalized DNS model (single source of truth) ----
+   Zeek dns.log rows are TRANSACTIONS: every row originates from a query;
+   a row carrying RCODE/RTT also contains the reply. Every consumer below
+   (table, counters, type chips, filter, aggregates, drawer) reads only the
+   normalized record — no second parsing path exists. */
+const DNS_CAP=1200, dnsBuf=[], dnsKeys=new Set();
+let dnsEvictedUI=0, dnsEps=0;
+const fmtMs=ms=>(ms>=100?Math.round(ms):Math.round(ms*10)/10)+" ms";
+function dnsHasResp(e){return (e.rt!=null&&e.rt>0)||!!(e.rc&&String(e.rc).length);}
+function normDNS(e){
+  if(e._n)return e._n;
+  const hasResp=dnsHasResp(e);
+  const n={
+    ts:e.t||0,
+    txid:e.id!=null?String(e.id):"",
+    dir:hasResp?"reply":"query",            /* transaction classification */
+    status:e.st||(hasResp?"answered":"pending"),
+    query:e.nm||"",
+    rtype:e.ty||e.qtype_name||"",           /* "UNKNOWN" shown when missing */
+    rcode:e.rc||"",                          /* "UNKNOWN" shown when missing */
+    answers:Array.isArray(e.an)?e.an:[],
+    client:e.cl||"",cport:e.clp??"",
+    server:e.sv||"",sport:e.svp??"",
+    transport:(e.tr||"").toLowerCase(),
+    latencyMs:(e.rt!=null&&e.rt>0)?e.rt:null /* null = no measurement, never 0 */
+  };
+  e._n=n;return n;
+}
+function dnsKey(e){return (e.t||0)+"|"+(e.id??"")+"|"+(e.cl||"")+"|"+(e.sv||"")+"|"+(e.nm||"");}
+function dnsIngest(arr){
+  for(const e of arr){
+    const k=dnsKey(e);
+    if(dnsKeys.has(k))continue;
+    dnsKeys.add(k);normDNS(e);dnsBuf.push(e);
+  }
+  while(dnsBuf.length>DNS_CAP){
+    dnsKeys.delete(dnsKey(dnsBuf.shift()));
+    dnsEvictedUI++;
+  }
+}
+function dnsStats(){
+  const now=D.now||Date.now()/1000;
+  let resp=0,nx=0,rtN=0,rtSum=0;
+  for(const e of dnsBuf){
+    const n=e._n||normDNS(e);
+    if(n.dir==="reply"){resp++;
+      if(n.rcode==="NXDOMAIN")nx++;
+      if(n.latencyMs!=null){rtSum+=n.latencyMs;rtN++;}}
+  }
+  return {total:dnsBuf.length,resp,nx,rtN,avg:rtN?rtSum/rtN:null};
+}
+function dnsTick(){
+  const now=D.now||Date.now()/1000;
+  let e10=0;
+  for(const e of dnsBuf)if(now-(e.t||0)<=10)e10++;
+  const eps=e10/10;
+  dnsEps=dnsEps===0?eps:dnsEps*.7+eps*.3;
+}
+const midTrunc=(s,n)=>{s=String(s||"");if(s.length<=n)return s;
+  const keep=n-3,head=Math.ceil(keep*.55);
+  return s.slice(0,head)+"…"+s.slice(s.length-(keep-head));};
+const shannon=s=>{if(!s)return 0;const m={};for(const c of s)m[c]=(m[c]||0)+1;
+  let e=0;for(const k in m){const p=m[k]/s.length;e-=p*Math.log2(p);}return e;};
+
+$("#dnsQ").addEventListener("input",e=>{clearTimeout(window._dnsT);
+  window._dnsT=setTimeout(()=>{dnsFilter=e.target.value.trim().toLowerCase();render();},200);});
+
+function dnsBuildAgg(){
+  dnsAgg={};
+  const now=D.now||0;
+  for(const e of dnsBuf){
+    const n=normDNS(e);
+    const c=dnsAgg[n.client]||(dnsAgg[n.client]={par:new Map(),n:0,nx:0,txt:0,q60:0});
+    c.n++;
+    if(n.rcode==="NXDOMAIN")c.nx++;
+    if(n.rtype==="TXT")c.txt++;
+    if(now-(e.t||0)<=60)c.q60++;
+    const L=n.query.toLowerCase().split(".").filter(Boolean);
+    if(L.length>=2){const p=L.slice(-2).join(".");
+      let s=c.par.get(p);if(!s){s=new Set();c.par.set(p,s);}s.add(L[0]);}
+  }
+  for(const k in dnsAgg){const c=dnsAgg[k];let mx=0;
+    for(const s of c.par.values())if(s.size>mx)mx=s.size;
+    c.uniSub=mx;c.qpm=c.q60;}
+}
+
+function dnsRisk(e){
+  if(e._rk)return e._rk;
+  const n=normDNS(e);
+  const nmL=n.query.toLowerCase();
+  const labels=nmL.split(".").filter(Boolean);
+  const first=labels[0]||"";
+  const ind={len:nmL.length,labels:labels.length,lablen:first.length,
+             ent:+shannon(first).toFixed(2)};
+  const reasons=[];let med=0,high=0,low=0;
+  if(ind.lablen>=52){high++;reasons.push("very long subdomain label ("+ind.lablen+" chars) — encoded-data pattern");}
+  else if(ind.lablen>=40){med++;reasons.push("long subdomain label ("+ind.lablen+" chars)");}
+  if(ind.len>=180){high++;reasons.push("extremely long query name ("+ind.len+" chars)");}
+  else if(ind.len>=100){med++;reasons.push("unusually long query name ("+ind.len+" chars)");}
+  if(ind.ent>=4.5&&ind.lablen>=20){high++;reasons.push("very high entropy "+ind.ent+" (random/encoded label)");}
+  else if(ind.ent>=3.9&&ind.lablen>=25){med++;reasons.push("high entropy "+ind.ent);}
+  else if(ind.ent>=3.5&&ind.lablen>=18){low++;reasons.push("moderate entropy "+ind.ent);}
+  if(ind.labels>=7){low++;reasons.push("many DNS labels ("+ind.labels+")");}
+  if(/^[a-z0-9+/_=-]{32,}$/.test(first)){med++;reasons.push("encoded-looking label ("+ind.lablen+" chars)");}
+  const a=dnsAgg[n.client];
+  if(a){
+    if(a.uniSub>=150){high++;reasons.push(a.uniSub+" unique subdomains under a single domain");}
+    else if(a.uniSub>=50){med++;reasons.push(a.uniSub+" unique subdomains under a single domain");}
+    if(a.qpm>=120){high++;reasons.push("very high query rate ("+a.qpm+"/min)");}
+    else if(a.qpm>=60){med++;reasons.push("high query rate ("+a.qpm+"/min)");}
+    if(a.n>=10&&a.nx/a.n>=.3){med++;reasons.push(Math.round(a.nx/a.n*100)+"% NXDOMAIN rate");}
+    if(a.n>=10&&a.txt/a.n>=.3){med++;reasons.push(Math.round(a.txt/a.n*100)+"% TXT queries");}
+  }
+  let lvl="NORMAL";
+  if(high>=1||(high===0&&med>=2))lvl="HIGH";
+  else if(med===1)lvl="MEDIUM";
+  else if(low>=1)lvl="LOW";
+  e._rk={lvl,reasons,ind};
+  return e._rk;
+}
+
+const dnsMatch=n=>{
+  if(!dnsFilter)return true;
+  const KV={domain:n.query,type:n.rtype||"unknown",rcode:n.rcode||"unknown",
+    client:n.client,server:n.server,transport:n.transport,status:n.status,
+    dir:n.dir,txid:n.txid};
+  let rest=dnsFilter;
+  for(const pair of (rest.match(/(\w+):(\S+)/g)||[])){
+    const i=pair.indexOf(":"),k=pair.slice(0,i),v=pair.slice(i+1);
+    const val=KV[k];
+    if(val==null||!String(val).toLowerCase().includes(v))return false;
+    rest=rest.replace(pair,"");
+  }
+  rest=rest.replace(/\s+/g," ").trim();
+  if(!rest)return true;
+  return [n.query,n.answers.join(" "),n.client,n.server,n.rtype,n.rcode,n.status,n.transport,n.txid]
+    .join(" ").toLowerCase().includes(rest);
+};
+
+function dnsOpenDrawer(e){
+  const n=normDNS(e),rk=dnsRisk(e),ans=n.answers;
+  const kv=[["Query",n.query||"—",1],["Type",n.rtype||"UNKNOWN"],
+    ["RCODE",n.rcode||"UNKNOWN"],
+    ["Direction",n.dir==="reply"?"query \u2192 reply":"query (no reply yet)"],
+    ["Status",n.status||"—"],
+    ["Transport",(n.transport||"—").toUpperCase()],
+    ["Client",(n.client||"-")+":"+n.cport,1],
+    ["Server",(n.server||"-")+":"+n.sport,1],
+    ["TXID",n.txid||"—"],
+    ["Latency",n.latencyMs!=null?fmtMs(n.latencyMs):"—"],
+    ["Timestamp",e.t?fmtT(e.t):"—"],["Age",ago(e.t)]];
+  let html=`<h4>DNS transaction</h4><div class="dkv">`+
+    kv.map(x=>`<span class="k">${x[0]}</span><span class="v">${
+      x[2]?`<span class="qcell" data-copy="${esc(x[1])}" title="click to copy">${esc(x[1])}</span>`:esc(x[1])}</span>`).join("")+
+    `</div><h4>Answers (${ans.length})</h4>`+
+    (ans.length?`<div class="anslist">${ans.map(a=>
+      `<div class="qcell" data-copy="${esc(a)}" title="click to copy">${esc(a)}</div>`).join("")}</div>`
+      :`<div class="dim" style="font-size:12.5px">—</div>`)+
+    `<h4>Security analysis</h4><div class="dkv">
+      <span class="k">Risk</span><span class="v"><span class="badge b-${rk.lvl}">${rk.lvl}</span></span>
+      <span class="k">Indicators</span><span class="v mono">query len ${rk.ind.len} · labels ${rk.ind.labels} · label len ${rk.ind.lablen} · entropy ${rk.ind.ent}</span>
+    </div>`+
+    (rk.lvl==="NORMAL"
+      ?`<div class="dim" style="font-size:12.5px;margin-top:10px">No anomaly indicators triggered. Heuristic assessment — not a verdict.</div>`
+      :`<div class="why"><b>Potential DNS anomaly — why flagged:</b><ul>${
+          rk.reasons.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>
+        <div class="dim" style="margin-top:6px;font-size:11.5px">Heuristic indicators computed from observed traffic — not a malware classification.</div></div>`);
+  $("#dnsDb").innerHTML=html;
+  $("#dnsDrawer").classList.add("open");
+  $("#dnsBk").classList.add("open");
+}
+const dnsCloseDrawer=()=>{$("#dnsDrawer").classList.remove("open");
+  $("#dnsBk").classList.remove("open");};
+$("#dnsDx").onclick=dnsCloseDrawer;
+$("#dnsBk").onclick=dnsCloseDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")dnsCloseDrawer();});
+document.addEventListener("click",ev=>{
+  const cp=ev.target.closest("[data-copy]");
+  if(cp){if(navigator.clipboard)navigator.clipboard.writeText(cp.dataset.copy);
+    const t=$("#dnsCopied");t.textContent="copied: "+midTrunc(cp.dataset.copy,44);
+    t.style.display="block";clearTimeout(window._cpT);
+    window._cpT=setTimeout(()=>t.style.display="none",1400);return;}
+  const tr=ev.target.closest("#dRows tr");
+  if(tr&&tr.dataset.ev!=null){
+    const e2=dnsBuf[+tr.dataset.ev];
+    if(e2)dnsOpenDrawer(e2);}
+});
+
+function rDns(){
+  const live=D.live,h=D.health||{},now=D.now||0;
+  const chip=$("#dnsLive");
+  chip.className="livechip "+(live?"on":"off");
+  chip.textContent=live?"LIVE ●":"DISCONNECTED";
+  dnsBuildAgg();
+  const list=dnsBuf.map((e,i)=>({e,n:normDNS(e),i})).reverse()
+    .filter(x=>dnsMatch(x.n));
+  const s=dnsStats();
+  const ddrop=(D.dnsdrop??h.dnsdrop??0);
+  $("#dnsOv").innerHTML=[
+    ["Queries",fmtN(s.total),"DNS transactions observed since page load — every Zeek dns.log row originates from a query"],
+    ["Responses",fmtN(s.resp),"transactions where a reply was seen (RCODE/RTT present)"],
+    ["NXDOMAIN",fmtN(s.nx),"replies whose RCODE is NXDOMAIN"],
+    ["Avg latency",s.avg!=null?fmtMs(s.avg):"—","mean RTT over "+s.rtN+" measured repl"+(s.rtN===1?"y":"ies")+" — missing RTTs are excluded"],
+    ["Events/sec",dnsEps.toFixed(1),"DNS rows per second, rolling 10 s window (smoothed)"],
+    ["Evicted",fmtN(ddrop+dnsEvictedUI),"oldest events rotated out of the bridge ring (500) and the UI buffer (1200) — buffer eviction, not packet loss"]
+  ].map(x=>`<div class="ovcell" title="${esc(x[2])}"><div class="l">${x[0]}</div><div class="v">${x[1]}</div></div>`).join("");
+  const ty={};for(const e of dnsBuf){const nn=normDNS(e);const k=nn.rtype||"UNKNOWN";ty[k]=(ty[k]||0)+1;}
+  const tt=Object.values(ty).reduce((a,b)=>a+b,0)||1;
+  const top=Object.entries(ty).sort((a,b)=>b[1]-a[1]);
+  $("#dnsRt").innerHTML=top.length?top.map(([k,v],i)=>
+    `<span class="rc${i===0?" top":""}"${k==="UNKNOWN"?' title="record type missing in stream — bridge must map qtype_name':""}>${esc(k)}<b>${fmtN(v)} · ${Math.round(v/tt*100)}%</b></span>`).join("")
+    :`<span class="rc">no record types yet</span>`;
+  const last=dnsBuf.length?dnsBuf[dnsBuf.length-1].t||0:0;
+  $("#dnsMeta").innerHTML=`<span>UI buffer ${fmtN(dnsBuf.length)} events · since page load</span>`+
+    (dnsEvictedUI?`<span>${fmtN(dnsEvictedUI)} evicted in UI</span>`:"")+
+    (last?`<span>last event ${Math.max(0,Math.round(now-last))}s ago</span>`:"");
+  setRows("#dRows",list.map(({e,n,i})=>{
+    const rk=dnsRisk(e),ans=n.answers;
+    const rcT=n.rcode||"UNKNOWN";
+    return `
+    <tr data-ev="${i}" style="cursor:pointer">
+      <td><span class="badge ${n.dir==="reply"?"b-r":"b-q"}" title="${n.dir==="reply"?"query \u2192 reply":"query, no reply seen yet"}">${n.dir==="reply"?"Q\u2192R":"Q"}</span></td>
+      <td><span class="badge b-${esc(n.status)}">${esc(n.status)}</span></td>
+      <td><span class="qcell cell" data-copy="${esc(n.query)}" title="${esc(n.query)} — click to copy">${esc(midTrunc(n.query,48))||"<span class=dim>(unparsed)</span>"}</span></td>
+      <td title="${n.rtype?esc(n.rtype):"record type missing in stream — bridge must map qtype_name"}" class="${n.rtype?"":"dim"}">${esc(n.rtype)||"UNKNOWN"}</td>
+      <td title="${esc(rcT)}" class="${n.rcode==="NOERROR"?"ok":n.rcode?"bad":"dim"}">${esc(rcT)}</td>
+      <td>${ans.length?`<span class="cell" title="${esc(ans.join(", "))}">${esc(midTrunc(ans[0],26))}</span>${ans.length>1?`<br><span class="more" title="${esc(ans.join(", "))}">+${ans.length-1} more</span>`:""}`:"—"}</td>
+      <td class="mono">${esc(n.client)}<span class="port">:${esc(n.cport)}</span></td>
+      <td class="num">${n.latencyMs!=null?fmtMs(n.latencyMs):"<span class=dim title='no RTT measurement on this event'>—</span>"}</td>
+      <td><span class="badge b-${rk.lvl}">${rk.lvl}</span></td>
+      <td class="dim">${ago(e.t)}</td>
+    </tr>`;}).join(""));
+  const em=$("#dEmpty");
+  if(!dnsBuf.length){em.style.display="block";
+    em.textContent=live?"Waiting for DNS events…":"Live DNS stream disconnected.";}
+  else if(!list.length){em.style.display="block";
+    em.textContent="No DNS events match the current filters.";}
+  else em.style.display="none";
+}
+
+/* ---------- TLS monitor v2 ---------- */
+const tlsDash="—";
+const prmTls=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+let tlsFilter="",tlsQuick="all",tlsLastT=-1,tlsPulseFrom=0,tlsHeadCipher=null,tlsView=[];
+const tlsLegacy=["TLS1.0","TLS1.1","SSLv3","SSLv2"];
+const tlsPct=(n,t)=>t?Math.round(n/t*100)+"%":"0%";
+$("#tlsF").addEventListener("input",e=>{clearTimeout(window._tlsT);
+  window._tlsT=setTimeout(()=>{tlsFilter=e.target.value.trim();render();},200);});
+
+function tlsParseFilter(f){
+  const toks=f.toLowerCase().split(/\s+/).filter(Boolean);
+  return e=>{
+    for(const t of toks){
+      const ci=t.indexOf(":");
+      let ok=false;
+      if(ci<0){
+        ok=[e.sni,e.ver,e.alpn,e.ja3,e.ja3s,e.ja4,e.ja4s,e.cl,e.sv,e.state,e.cipher,e.dnsname]
+          .join(" ").toLowerCase().includes(t);
+      }else{
+        const k=t.slice(0,ci),v=t.slice(ci+1);
+        const V=x=>String(x==null?"":x).toLowerCase();
+        if(k==="sni")ok=V(e.sni).includes(v);
+        else if(k==="ver")ok=V(e.ver).replace(/\./g,"").includes(v.replace(/\./g,""));
+        else if(k==="alpn")ok=V(e.alpn).includes(v);
+        else if(k==="ja3")ok=(V(e.ja3)+V(e.ja3s)).includes(v);
+        else if(k==="ja4")ok=(V(e.ja4)+" "+V(e.ja4s)).includes(v);
+        else if(k==="client")ok=(V(e.cl)+":"+e.clp).includes(v);
+        else if(k==="server")ok=(V(e.sv)+":"+e.svp+" "+V(e.dnsname)).includes(v);
+        else if(k==="state")ok=V(e.state).includes(v);
+        else if(k==="cipher")ok=V(e.cipher).includes(v);
+        else ok=true;
+      }
+      if(!ok)return false;
+    }
+    return true;
+  };
+}
+function tlsQuickMatch(e){
+  switch(tlsQuick){
+    case "all":return true;
+    case "nosni":return !e.sni;
+    case "ja3":return !!e.ja3;
+    case "ja4":return !!e.ja4;
+    case "resumed":return !!e.resumed;
+    case "success":case "failed":case "incomplete":
+      return String(e.state||"").toLowerCase()===tlsQuick;
+    default:return String(e.ver||"").toLowerCase().replace(/\./g,"")===tlsQuick.replace(/\./g,"");
+  }
+}
+const TLS_QUICKS=[["all","All"],["tls1.3","TLS 1.3"],["tls1.2","TLS 1.2"],["success","success"],
+  ["failed","failed"],["incomplete","incomplete"],["nosni","no SNI"],["ja4","has JA4"],["ja3","has JA3"],["resumed","resumed"]];
+const tlsBar=(lbl,n,max,color,title)=>`<div class="lbl"${title?` title="${esc(title)}"`:""}>
+  <span>${lbl}</span><b>${fmtN(n)}</b></div>
+  <div class="bar"><i style="width:${max?Math.max(2,Math.round(n/max*100)):0}%;background:${color}"></i></div>`;
+
+function drawTlsRate(rate,now){
+  const cv=$("#tlsRate");if(!cv)return;
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth||cv.parentElement.clientWidth||500,H=cv.clientHeight||150;
+  cv.width=W*dpr;cv.height=H*dpr;
+  const g=cv.getContext("2d");g.scale(dpr,dpr);g.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement);
+  const cyan=cs.getPropertyValue("--cyan").trim()||"#22d3ee";
+  const dim=cs.getPropertyValue("--dim").trim()||"#8b98ad";
+  const n=rate.length||1,max=Math.max(1,...rate),bw=W/n;
+  g.fillStyle=cyan;
+  for(let i=0;i<n;i++){const v=rate[i]||0;
+    if(v){const h=Math.max(2,Math.round(v/max*(H-28)));
+      g.globalAlpha=.9;g.fillRect(i*bw+1,H-16-h,Math.max(1,bw-2),h);}}
+  g.globalAlpha=1;g.fillStyle=dim;g.font="10px ui-sans-serif,system-ui";
+  const tf=t=>new Date(t*1000).toLocaleTimeString([],{hour12:false});
+  g.textAlign="left";g.fillText(tf(now-n),2,H-4);
+  g.textAlign="right";g.fillText(tf(now),W-2,H-4);
+  g.fillText(max+"/s peak",W-2,10);
+}
+
+function tlsAge(t){
+  const x=Math.max(0,Math.round(D.now-t));
+  if(x<60)return x+"s";
+  if(x<3600)return Math.floor(x/60)+"m "+(x%60)+"s";
+  if(x<86400)return Math.floor(x/3600)+"h "+Math.floor(x%3600/60)+"m";
+  return Math.floor(x/86400)+"d "+Math.floor(x%86400/3600)+"h";
+}
+function sniCellHtml(e){
+  if(e.sni)return `<span class="chip" style="--h:${hue(e.sni)}">${esc(e.sni)}</span>`;
+  if(e.state==="INCOMPLETE"||e.state==="FAILED")
+    return `<span class="dim" title="Zeek logged this handshake without a ClientHello (connection may predate capture, or client-side packets were dropped) — no verdict implied">ClientHello not seen</span>`;
+  return `<span class="dim" title="No server_name observed on a completed handshake — possible TLS 1.3 resumption, ECH or client behavior. Reduced visibility, not a verdict">SNI unavailable ${tlsDash}</span>`;
+}
+
+function rTls(){
+  const S=D.tls_stats||{},evs=D.tls||[],now=D.now||Date.now()/1000;
+  /* LIVE chip: on only while TLS events are actually arriving */
+  let newest=0;for(const e of evs)if((e.t||0)>newest)newest=e.t;
+  if(tlsLastT<0){tlsPulseFrom=0;}
+  else if(newest>tlsLastT){tlsPulseFrom=tlsLastT;}
+  else{tlsPulseFrom=0;}
+  tlsLastT=Math.max(tlsLastT,newest);
+  const lc=$("#tlsLive"),lt=$("#tlsLiveTxt");
+  const live=newest>0&&now-newest<=10;
+  lc.className="livechip "+(live?"on":"off");
+  lt.textContent=live?"LIVE":"IDLE";
+  $("#tlsMeta").innerHTML=`<span>session: <b>${fmtN(S.total??evs.length)}</b> connections</span>
+    <span>buffered: <b>${fmtN(S.shown??evs.length)}</b></span>
+    <span>SNI hosts: <b>${fmtN(S.sni_hosts||0)}</b></span>
+    <span title="A dash means the field was not present in the Zeek stream — it is never guessed">${tlsDash} = not in Zeek stream</span>`;
+  /* summary cards — every value from tls_stats, one single source */
+  const ver=S.ver||{},stt=S.state||{},tot=S.total??evs.length;
+  const cards=[
+    ["TLS connections",S.total??evs.length,"unique TLS connections this bridge session (one uid = one connection, merged ssl.log rows)"],
+    ["TLS 1.3",ver["TLS1.3"]||0,tlsPct(ver["TLS1.3"]||0,tot)+" of session connections"],
+    ["TLS 1.2",ver["TLS1.2"]||0,tlsPct(ver["TLS1.2"]||0,tot)+" of session connections"],
+    ["SNI visible",S.sni_vis||0,"server_name present in the observed handshake"],
+    ["SNI hidden",S.sni_no||0,(S.sni_no_est||0)+" on completed handshakes — TLS 1.3 resumption, ECH or client behavior can hide SNI. Reduced visibility, not a verdict"],
+    ["Unique servers",S.servers||0,"distinct ip:port TLS destinations observed this session"],
+    ["JA4 fingerprints",S.ja4_n||0,S.has_ja4?"distinct JA4 client fingerprints logged by Zeek (foxio/ja4 package)":"Zeek did not log the ja4 field — install the zeek/foxio/ja4 package"],
+    ["JA3 fingerprints",S.ja3_n||0,S.has_ja3?"distinct client-hello fingerprints logged by Zeek":"Zeek did not log the ja3 field — fingerprints show "+tlsDash],
+    ["Handshake errors",stt.FAILED||0,"failed handshakes (alert seen) — network events, not automatically malicious"],
+  ];
+  $("#tlsOv").innerHTML=cards.map(c=>`<div class="ovcell" title="${esc(c[2])}">
+    <div class="l">${c[0]}</div><div class="v">${fmtN(c[1])}</div></div>`).join("");
+  /* connection-rate chart (bounded 60 x 1 s window from the bridge) */
+  const rate=S.rate||[];
+  drawTlsRate(rate,now);
+  $("#tlsRateNow").textContent=fmtN(rate.length?rate[rate.length-1]:0);
+  /* handshakes */
+  const hsMax=Math.max(1,stt.SUCCESS||0,stt.FAILED||0,stt.INCOMPLETE||0,stt.UNKNOWN||0);
+  $("#tlsHs").innerHTML=
+    tlsBar("success",stt.SUCCESS||0,hsMax,"var(--green)","handshake completed (Zeek established=true)")+
+    tlsBar("failed",stt.FAILED||0,hsMax,"var(--red)","handshake aborted with a TLS alert — a network event, not automatically malicious")+
+    tlsBar("incomplete",stt.INCOMPLETE||0,hsMax,"var(--amber)","handshake seen but never completed — no verdict implied")+
+    tlsBar("unknown",stt.UNKNOWN||0,hsMax,"#8b98ad","Zeek row without an established field");
+  /* versions — only versions actually observed are listed */
+  const vers=Object.entries(ver).sort((a,b)=>b[1]-a[1]);
+  const vMax=Math.max(1,...vers.map(v=>v[1]));
+  $("#tlsVer").innerHTML=vers.map(([k,v])=>
+    tlsBar(k+(tlsLegacy.includes(k)?" <span class='badge b-leg' title='Legacy protocol version — informational, not a verdict'>legacy</span>":""),v,vMax,
+      tlsLegacy.includes(k)?"var(--amber)":"var(--cyan)")).join("")
+    ||`<div class="dim" style="font-size:12.5px">no versions yet</div>`;
+  /* JA4 frequency (top 8 from the bridge) */
+  const ja4None=S.total&&!(S.ja4_n||0);
+  $("#tlsJa4").innerHTML=(S.top_ja4||[]).map(j=>`
+    <div class="ja3row" data-j="${esc(j.j)}" data-k="ja4" tabindex="0" title="click for JA4 details">
+      <span class="mono">${esc(j.j)}</span>
+      <span class="n"><b>${fmtN(j.n)}</b> conn · ${fmtN(j.d)} dest · ${fmtN(j.c)} client${j.c===1?"":"s"}</span>
+    </div>`).join("")||
+    `<div class="dim" style="font-size:12.5px">${ja4None?"No JA4 observed — the Zeek ja4 package (zeek/foxio/ja4) must be installed and loaded, and the ClientHello must be seen. Fingerprints show "+tlsDash+" until then.":"no JA4 data yet"}</div>`;
+  /* JA3 frequency (top 8 from the bridge) */
+  const ja3None=S.total&&!(S.ja3_n||0);
+  $("#tlsJa3").innerHTML=(S.top_ja3||[]).map(j=>`
+    <div class="ja3row" data-j="${esc(j.j)}" tabindex="0" title="click for JA3 details">
+      <span class="mono">${esc(midTrunc(j.j,16))}</span>
+      <span class="n"><b>${fmtN(j.n)}</b> conn · ${fmtN(j.d)} dest · ${fmtN(j.c)} client${j.c===1?"":"s"}</span>
+    </div>`).join("")||
+    `<div class="dim" style="font-size:12.5px">${ja3None?"No JA3 observed — install the Zeek ja3 package (zeek/salesforce/ja3). Fingerprints show "+tlsDash+" until then.":"no JA3 data yet"}</div>`;
+  /* destinations (grouped by server, SNI shown when observed) */
+  $("#tlsSrv").innerHTML=(S.top_srv||[]).map(s=>`
+    <div class="srvrow" data-srv="${esc(s.ep)}" tabindex="0" title="${esc("click to filter connections — server: "+s.ep+(s.sni?" · SNI: "+s.sni:""))}">
+      <span class="mono">${esc(s.sni||s.ep)}</span>
+      <span class="n"><b>${fmtN(s.n)}</b> conn${s.fail?` · <span style="color:var(--red)">${s.fail} failed</span>`:""}</span>
+    </div>`).join("")||`<div class="dim" style="font-size:12.5px">no destinations yet</div>`;
+  /* ALPN distribution */
+  const alpnE=Object.entries(S.alpn||{}).sort((a,b)=>b[1]-a[1]);
+  const aMax=Math.max(1,...alpnE.map(a=>a[1]));
+  $("#tlsAlpn").innerHTML=alpnE.map(([k,v])=>tlsBar(k,v,aMax,"var(--violet)",
+    k==="unknown"?"next_protocol missing in the Zeek row — shown honestly as unknown":"")).join("")
+    ||`<div class="dim" style="font-size:12.5px">no ALPN data yet</div>`;
+  /* SNI visibility */
+  const svN=S.sni_vis||0,shN=S.sni_no||0,shE=S.sni_no_est||0,sMax=Math.max(1,svN,shN);
+  $("#tlsSni").innerHTML=
+    tlsBar("visible",svN,sMax,"var(--green)","server_name seen in the handshake")+
+    tlsBar("unavailable",shE,sMax,"#8b98ad","completed handshake without SNI — TLS 1.3 resumption, ECH or client behavior. Reduced visibility, not a verdict")+
+    tlsBar("missing",shN-shE,sMax,"var(--amber)","handshake did not complete — SNI never sent");
+  /* signals: informational, never verdicts */
+  $("#tlsSig").innerHTML=(S.signals||[]).map(s=>
+    `<span class="rc" title="${esc(s.d)}">${esc(s.t)}<b>${fmtN(s.n)}</b></span>`).join("")+
+    ((S.signals||[]).length?`<span class="rc" style="border-style:dashed" title="Signals describe what was observed. They are not malware classifications.">signals are informational — not verdicts</span>`:"");
+  /* quick chips */
+  $("#tlsChips").innerHTML=TLS_QUICKS.map(([k,l])=>
+    `<button class="fbtn${tlsQuick===k?" active":""}" data-q="${k}">${l}</button>`).join("");
+  /* table: CIPHER column appears only if Zeek actually provides ciphers */
+  const hasC=!!S.has_cipher;
+  if(hasC!==tlsHeadCipher){tlsHeadCipher=hasC;
+    $("#tlsHead").innerHTML=`<th>Type</th><th>SNI (server name)</th><th>Version</th><th>ALPN</th><th>JA4</th><th>JA3</th><th>Client</th><th>Server</th><th>State</th>${hasC?"<th>Cipher</th>":""}<th>Age</th>`;}
+  tlsView=evs.filter(e=>tlsQuickMatch(e)&&tlsParseFilter(tlsFilter)(e)).reverse();
+  const list=tlsView.slice(0,300);
+  setRows("#tlsRows",list.map((e,i)=>{
+    const isNew=!prmTls&&(e.t||0)>tlsPulseFrom?" class='tnew'":"";
+    const verCell=e.ver?`${esc(e.ver)}${tlsLegacy.includes(e.ver)?`<span class="badge b-leg" title="Legacy protocol version — informational, not a verdict">legacy</span>`:""}`:`<span class="dim">${tlsDash}</span>`;
+    const stCls={SUCCESS:"b-est",FAILED:"b-rst",INCOMPLETE:"b-inc"}[e.state]||"";
+    const stTip={SUCCESS:"handshake completed",FAILED:"handshake aborted with a TLS alert — network event, not a verdict",INCOMPLETE:"handshake seen but not completed"}[e.state]||"Zeek row without an established field";
+    const stCell=e.state&&e.state!=="UNKNOWN"?`<span class="badge ${stCls}" title="${esc(stTip)}">${esc(e.state.toLowerCase())}</span>`:`<span class="dim" title="${esc(stTip)}">${tlsDash}</span>`;
+    return `<tr tabindex="0" data-i="${i}"${isNew}>
+      <td><span class="badge b-TLS">TLS</span>${e.resumed?`<span class="dim" title="session resumed — abbreviated handshake"> ↻</span>`:""}</td>
+      <td>${sniCellHtml(e)}</td><td>${verCell}</td>
+      <td class="dim mono">${esc(e.alpn)||tlsDash}</td>
+      <td class="mono dim" title="${esc(e.ja4||"")}${e.ja4?"&#10;JA4S: "+esc(e.ja4s||tlsDash):""}">${e.ja4?esc(midTrunc(e.ja4,14)):tlsDash}</td>
+      <td class="mono dim" title="${esc(e.ja3||"")}${e.ja3?"&#10;JA3S: "+esc(e.ja3s||tlsDash):""}">${e.ja3?esc(midTrunc(e.ja3,10)):tlsDash}</td>
+      <td class="mono">${esc(e.cl)}:${e.clp}</td>
+      <td class="mono">${esc(e.sv)}:${e.svp}</td>
+      <td>${stCell}</td>
+      ${hasC?`<td class="mono dim">${esc(e.cipher)||tlsDash}</td>`:""}
+      <td class="dim">${tlsAge(e.t)}</td></tr>`;
+  }).join(""));
+  const em=$("#tlsEmpty");
+  if(!evs.length){em.style.display="block";
+    em.innerHTML=`<b>NO TLS ACTIVITY</b><br>Waiting for TLS events… visit any HTTPS site or run <code>curl https://example.com</code>`;
+  }else if(!list.length){em.style.display="block";
+    em.innerHTML="No TLS events match the current filters.";}
+  else em.style.display="none";
+}
+
+function tlsOpenDrawer(e){
+  $("#tlsDhT").textContent="TLS connection details";
+  const kv=(k,v,mono,cp)=>`<span class="k">${k}</span><span class="v">${
+    v!=null&&v!==""?`<span${cp?' class="qcell" data-copy="'+esc(String(v))+'" title="click to copy"':""}${mono?' style="font-family:ui-monospace,Consolas,monospace"':""}>${esc(String(v))}</span>`:tlsDash}</span>`;
+  const stTxt={SUCCESS:"handshake completed (Zeek established=true)",
+    FAILED:"handshake aborted with a TLS alert — a network event, not automatically malicious",
+    INCOMPLETE:"handshake seen but never completed — no verdict implied",
+    UNKNOWN:"Zeek row without an established field"}[e.state]||"";
+  let html=`<h4>Endpoints</h4><div class="dkv">
+    ${kv("Client",(e.cl||"")+":"+(e.clp||""),1,1)}
+    ${kv("Server",(e.sv||"")+":"+(e.svp||""),1,1)}
+    ${kv("Name (observed)",e.dnsname,0,1)}
+  </div><h4>Handshake</h4><div class="dkv">
+    ${kv("SNI",e.sni)}
+    ${kv("TLS version",e.ver)}
+    ${kv("ALPN",e.alpn)}
+    ${kv("Cipher",e.cipher,1)}
+    ${kv("Curve",e.curve,1)}
+    ${kv("State",e.state?e.state.toLowerCase():"")}
+    ${kv("Resumed",e.resumed===true?"yes":e.resumed===false?"no":"")}
+    ${kv("Alert",e.alert)}
+    ${kv("Cert validation",e.valid)}
+    ${kv("JA4",e.ja4,1,1)}
+    ${kv("JA4S",e.ja4s,1,1)}
+    ${kv("JA3",e.ja3,1,1)}
+    ${kv("JA3S",e.ja3s,1,1)}
+    ${kv("Zeek uid",e.uid,1,1)}
+    ${kv("ssl_history",e.hist,1)}
+  </div>`;
+  if(stTxt)html+=`<div class="dim" style="font-size:11.5px;margin-top:8px">${esc(stTxt)}.</div>`;
+  html+=`<h4>Correlation (observed only)</h4><div class="dkv">
+    ${kv("Flow bytes",e.fby!=null?fmtB(e.fby):"")}
+    ${kv("Flow packets",e.fpk!=null?fmtN(e.fpk):"")}
+  </div>`;
+  if(e.fby==null)html+=`<div class="dim" style="font-size:11.5px;margin-top:6px">No matching conn.log flow in the recent window (idle-expired or not yet flushed) — shown as ${tlsDash}, not guessed.</div>`;
+  html+=`<h4>Note</h4><div class="dim" style="font-size:12px;line-height:1.6">Fields show only what Zeek could observe. Missing values mean reduced visibility — TLS 1.3, resumed sessions and incomplete handshakes legitimately hide details. This is information, not a verdict.</div>`;
+  $("#tlsDb").innerHTML=html;
+  $("#tlsDrawer").classList.add("open");
+  $("#tlsBk").classList.add("open");
+}
+function tlsOpenJa3(j,kind){
+  kind=kind==="ja4"?"ja4":"ja3";const KU=kind.toUpperCase();
+  const hit=((D.tls_stats||{})["top_"+kind]||[]).find(x=>x.j===j);
+  if(!hit)return;
+  $("#tlsDhT").textContent=KU+" fingerprint details";
+  $("#tlsDb").innerHTML=`<h4>${KU} (client hello)</h4>
+  <div class="qcell" data-copy="${esc(j)}" title="click to copy" style="font-family:ui-monospace,Consolas,monospace;font-size:12px;word-break:break-all">${esc(j)}</div>
+  <h4>Usage — this session</h4><div class="dkv">
+  <span class="k">Connections</span><span class="v">${fmtN(hit.n)}</span>
+  <span class="k">Unique destinations</span><span class="v">${fmtN(hit.d)}${hit.d>=64?"+":""}</span>
+  <span class="k">Clients</span><span class="v">${fmtN(hit.c)}${hit.c>=16?"+":""}</span>
+  <span class="k">First seen</span><span class="v">${fmtT(hit.fs)}</span>
+  <span class="k">Last seen</span><span class="v">${fmtT(hit.ls)}</span>
+  </div>
+  <h4>Actions</h4><button class="fbtn" id="tlsJa3Filter">show its connections in the table</button>
+  <div class="dim" style="font-size:11.5px;margin-top:10px">${KU} is logged by Zeek (${kind==="ja4"?"zeek/foxio/ja4":"zeek/salesforce/ja3"} package) and passed through unchanged — never computed in NetPulse. Rarity within this session is a signal, not a verdict.</div>`;
+  $("#tlsJa3Filter").onclick=()=>{
+    tlsCloseDrawer();
+    $("#tlsF").value=kind+":"+j.slice(0,kind==="ja4"?14:8);
+    tlsFilter=kind+":"+j.slice(0,kind==="ja4"?14:8);tlsQuick="all";render();};
+  $("#tlsDrawer").classList.add("open");
+  $("#tlsBk").classList.add("open");
+}
+const tlsCloseDrawer=()=>{$("#tlsDrawer").classList.remove("open");
+  $("#tlsBk").classList.remove("open");};
+$("#tlsDx").onclick=tlsCloseDrawer;
+$("#tlsBk").onclick=tlsCloseDrawer;
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape")tlsCloseDrawer();
+  if(e.key==="Enter"&&document.activeElement&&document.activeElement.closest){
+    const tr=document.activeElement.closest("#tlsRows tr");
+    if(tr&&tr.dataset.i!=null&&tlsView[+tr.dataset.i])tlsOpenDrawer(tlsView[+tr.dataset.i]);
+  }
+});
+document.addEventListener("click",ev=>{
+  const tr=ev.target.closest("#tlsRows tr");
+  if(tr&&tr.dataset.i!=null&&tlsView[+tr.dataset.i]){tlsOpenDrawer(tlsView[+tr.dataset.i]);return;}
+  const jr=ev.target.closest("#tlsJa3 .ja3row,#tlsJa4 .ja3row");
+  if(jr&&jr.dataset.j){tlsOpenJa3(jr.dataset.j,jr.dataset.k||"ja3");return;}
+  const sr=ev.target.closest("#tlsSrv .srvrow");
+  if(sr&&sr.dataset.srv){
+    const f="server:"+sr.dataset.srv.split(":")[0];
+    $("#tlsF").value=f;tlsFilter=f;tlsQuick="all";render();return;}
+  const qb=ev.target.closest("#tlsChips [data-q]");
+  if(qb){tlsQuick=qb.dataset.q;render();}
+});
+
+/* ---------- ICMP / ICMPv6 ---------- */
+function icmpRows(sel,emptySel,list){
+  setRows(sel, list.map(f=>`
+    <tr><td class="mono">${esc(f.ea)}</td><td class="dim">➜</td>
+    <td class="mono">${esc(f.eb)}</td>
+    <td>${f.it} ${f.it===8||f.it===128?'<span class="badge b-est">echo req</span>':
+        f.it===0||f.it===129?'<span class="badge b-q">echo rep</span>':""}</td>
+    <td>${f.ic}</td>
+    <td class="num">${fmtN(f.er)}</td><td class="num">${fmtN(f.ep)}</td>
+    <td class="num">${fmtN(f.tp)}</td><td class="num">${fmtB(f.tby)}</td>
+    <td class="dim mono">${fmtT(f.fs)}</td><td class="dim">${ago(f.ls)}</td></tr>`).join(""));
+  $(emptySel).style.display=list.length?"none":"block";
+}
+function rI4(){ icmpRows("#i4Rows","#i4Empty",
+  flowsOf("ICMP").filter(f=>matchQ(f.ea,f.eb,f.it,f.ic))); }
+function rI6(){ icmpRows("#i6Rows","#i6Empty",
+  flowsOf("ICMPv6").filter(f=>matchQ(f.ea,f.eb,f.it,f.ic))); }
+
+/* ---------- ARP ---------- */
+function rArp(){
+  const all=(D.arp||[]).filter(a=>matchQ(a.i1,a.i2,a.m1,a.m2));
+  setRows("#aRows", all.slice().sort((x,y)=>y.ls-x.ls).map(a=>`
+    <tr><td class="mono">${esc(a.i1)}<br><span class="mac">${esc(a.m1)||"?"}</span></td>
+    <td class="dim">⇄</td>
+    <td class="mono">${esc(a.i2)}<br><span class="mac">${esc(a.m2)||"?"}</span></td>
+    <td class="num">${fmtN(a.req)}</td><td class="num">${fmtN(a.rep)}</td>
+    <td class="num">${fmtN(a.p1)}</td><td class="num">${fmtN(a.p2)}</td>
+    <td class="num">${fmtN(a.tp)}</td>
+    <td class="dim mono">${fmtT(a.fs)}</td><td class="dim">${ago(a.ls)}</td></tr>`).join(""));
+  $("#aEmpty").style.display=all.length?"none":"block";
+}
+
+/* ---------- Other ---------- */ 
+let oxSel="All", oxKey="?";
+function rOther(){
+  const raw=flowsOf("OTHER");
+  /* summary — same single source as the table, unfiltered section totals */
+  let tp=0,by=0; const protos=new Set();
+  for(const f of raw){ tp+=f.tp||0; by+=f.tby||0;
+    protos.add((f.svc||"other").toUpperCase()); }
+  $("#oxFl").textContent=fmtN(raw.length);
+  $("#oxPk").textContent=fmtN(tp);
+  $("#oxBy").textContent=fmtB(by);
+  $("#oxNp").textContent=protos.size;
+  /* protocol chips — DOM rebuilt only when the observed protocol set changes */
+  const key=[...protos].sort().join("|");
+  if(key!==oxKey){
+    oxKey=key;
+    const list=["All",...[...protos].sort()];
+    $("#oxChips").innerHTML=list.map(p=>
+      `<button class="fbtn${p===oxSel?" active":""}" onclick="oxPick('${p.replace(/[^A-Za-z0-9_-]/g,"")}')">${esc(p)}</button>`).join("");
+  }
+  $("#oxCtl").classList.toggle("off",!raw.length);
+  /* chip filter + local search + existing global search */
+  const oxq=$("#oxQ").value.trim().toLowerCase();
+  const all=raw.filter(f=>
+    (oxSel==="All"||(f.svc||"").toUpperCase()===oxSel) &&
+    matchQ(f.ea,f.eb,f.svc,f.eap,f.ebp) &&
+    (!oxq||((f.svc||"")+" "+f.ea+" "+f.eb).toLowerCase().includes(oxq)));
+  const list=paginate(all,"other");
+  setRows("#xRows", list.length?list.map(f=>`
+    <tr><td>${svcCell(f)}</td>
+    <td class="mono">${esc(f.ea)}</td><td class="dim">➜</td>
+    <td class="mono">${esc(f.eb)}</td>
+    <td class="num">${fmtN(f.tp)}</td>
+    <td class="num up">${fmtB(f.aby)}</td><td class="num down">${fmtB(f.bby)}</td>
+    <td class="num">${fmtB(f.tby)}</td>
+    <td class="num rate">${(f.rab+f.rba)>0?fmtB(f.rab+f.rba)+"/s":"–"}</td>
+    <td>${stBadge(f.st)}</td>
+    <td class="dim mono">${fmtT(f.fs)}</td><td class="dim">${ago(f.ls)}</td></tr>`).join("")
+  : (raw.length?`<tr class="ox-nomatch"><td colspan="12">no rows match the current filter</td></tr>`:""));
+  $("#oxEmpty").style.display=raw.length?"none":"block";
+  pager("other",all);
+}
+function oxPick(p){
+  oxSel=(oxSel===p)?"All":p;
+  $("#oxChips").querySelectorAll(".fbtn").forEach(b=>
+    b.classList.toggle("active",b.textContent===oxSel));
+  rOther();
+}
+
+/* ---------- stats + diag ---------- */
+function barRows(list,labelFn,valFn){
+  const mx=Math.max(1,...list.map(valFn));
+  return list.map(x=>`
+    <div class="svc-row"><span class="chip" style="--h:${hue(labelFn(x))};
+      max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(labelFn(x))}</span>
+    <div class="bar"><i style="width:${(valFn(x)/mx*100).toFixed(1)}%;
+      background:hsl(${hue(labelFn(x))} 70% 55%)"></i></div>
+    <span class="svc-bytes">${fmtB(valFn(x))}</span></div>`).join("");
+}
+function rStats(){
+  $("#stEnd").innerHTML=barRows(D.endpoints||[],e=>e.name||e.ip||"?",e=>e.bytes)
+    ||`<div class="empty">no local-classified endpoints yet</div>`;
+  $("#stSvc").innerHTML=barRows(D.services||[],s=>s.name,s=>s.bytes)
+    ||`<div class="empty">no data</div>`;
+  $("#stDom").innerHTML=barRows(D.domains||[],d=>d.name,d=>d.bytes)
+    ||`<div class="empty">no domains yet</div>`;
+  $("#stProto").innerHTML=Object.entries(D.protos||{})
+    .sort((a,b)=>b[1]-a[1]).map(([k,v])=>
+      `<span>${pBadge(k)} <b>${fmtN(v)}</b> flows</span>`).join("")||"–";
+}
+function rDiag(){
+  const h=D.health||{};
+  const row=(k,v,cls)=>`<div>${k}<b class="${cls||""}">${v}</b></div>`;
+  $("#diagKv").innerHTML=
+    row("collector",D.live?"connected":"OFFLINE",D.live?"ok":"bad")+
+    row("capture interface","eth0")+
+    row("direction known",D.dir_known===false?"NO (iface has no IP)":"yes",
+        D.dir_known===false?"warn":"ok")+
+    row("log rows processed",fmtN(h.recv))+
+    row("active flows",fmtN(h.flows))+
+    row("log rows/s",fmtN(h.pps))+
+    row("history samples",fmtN((D.history||[]).length)+" / 90")+
+    row("bridge DNS qr split (q/r/mal)",`${fmtN(h.dnsq)} / ${fmtN(h.dnsr)} / ${fmtN(h.mal)}`)+
+    row("DNS pending (bridge)",fmtN(h.pend),h.pend?"warn":"")+
+    row("DNS UI buffer",fmtN(dnsBuf.length)+" events · "+fmtN(dnsEvictedUI)+" evicted")+
+    row("ARP conversations",fmtN(h.arpt))+
+    row("TLS events",fmtN(h.tlsch))+
+    row("UI: flows cut",fmtN(D.fcut||0),(D.fcut||0)?"warn":"")+
+    row("DNS evictions (bridge ring)",fmtN(D.dnsdrop??h.dnsdrop??0),(D.dnsdrop??h.dnsdrop??0)?"warn":"")+
+    row("bridge uptime",fmtN(Math.round((h.up_s||0)/60))+" min");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+netpulse
+*.bak*
+*.good
+*.merged
+logs/
+*.log
+.vscode/
+.idea/
+.DS_Store
